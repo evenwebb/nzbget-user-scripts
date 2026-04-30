@@ -49,7 +49,24 @@
 #
 ##############################################################################
 
-from __future__ import annotations
+NZBGET_CONFIG = r"""
+### NZBGET SCRIPT CONFIGURATION (read by NZBGet; ignored by Python)
+
+Events=FILE_DOWNLOADED
+Action=mark-bad
+DryRun=no
+
+MaxRarFiles=5
+CommandTimeoutSec=8
+
+UseCache=yes
+CacheFilename=.nzbget_passworddetector.json
+
+Tool=auto
+CountEncryptedHeaders=yes
+
+### NZBGET SCRIPT CONFIGURATION
+"""
 
 import json
 import os
@@ -65,44 +82,22 @@ from xmlrpc.client import ServerProxy
 def log(kind: str, msg: str) -> None:
     print(f"[{kind}] {msg}")
 
-# EDIT FOR YOUR SETUP
-# Script defaults used when NZBGet does not pass NZBPO_* options.
-DEFAULTS = {
-    "Events": "FILE_DOWNLOADED",
-    "Action": "mark-bad",  # mark-bad | pause | none
-    "DryRun": "no",
-    "MaxRarFiles": "5",
-    "CommandTimeoutSec": "8",
-    "UseCache": "yes",
-    "CacheFilename": ".nzbget_passworddetector.json",
-    "Tool": "auto",  # auto | unrar | 7z
-    "CountEncryptedHeaders": "yes",
-}
-# END EDIT FOR YOUR SETUP
-
-
-def _default(name: str, fallback: str) -> str:
-    return str(DEFAULTS.get(name, fallback))
-
-
 def _opt_str(name: str, default: str) -> str:
     raw = os.environ.get(f"NZBPO_{name}", "")
-    if raw != "":
-        return raw
-    return _default(name, default)
+    return raw if raw != "" else default
 
 
 def _opt_bool(name: str, default: bool) -> bool:
     raw = os.environ.get(f"NZBPO_{name}", "")
     if not raw:
-        raw = _default(name, "yes" if default else "no")
+        return default
     return raw.strip().lower() in {"yes", "true", "1", "on"}
 
 
 def _opt_int(name: str, default: int) -> int:
     raw = os.environ.get(f"NZBPO_{name}", "")
     if not raw:
-        raw = _default(name, str(default))
+        return default
     try:
         return int(raw.strip())
     except ValueError:

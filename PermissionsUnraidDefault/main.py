@@ -46,7 +46,25 @@
 #
 ##############################################################################
 
-from __future__ import annotations
+NZBGET_CONFIG = r"""
+### NZBGET SCRIPT CONFIGURATION (read by NZBGet; ignored by Python)
+
+RunMode=success-only
+DryRun=no
+
+TargetDir=directory
+
+Owner=nobody
+Group=users
+
+DirMode=0775
+FileMode=0664
+
+IgnoreChownErrors=yes
+FollowSymlinks=no
+
+### NZBGET SCRIPT CONFIGURATION
+"""
 
 import os
 from dataclasses import dataclass
@@ -57,25 +75,6 @@ POSTPROCESS_SUCCESS = 93
 POSTPROCESS_ERROR = 94
 POSTPROCESS_NONE = 95
 
-# EDIT FOR YOUR SETUP
-# Script defaults used when NZBGet does not pass NZBPO_* options.
-DEFAULTS = {
-    "RunMode": "success-only",  # success-only | always
-    "DryRun": "no",
-    "TargetDir": "directory",  # directory | final
-    "Owner": "nobody",
-    "Group": "users",
-    "DirMode": "0775",
-    "FileMode": "0664",
-    "IgnoreChownErrors": "yes",
-    "FollowSymlinks": "no",
-}
-# END EDIT FOR YOUR SETUP
-
-
-def _default(name: str, fallback: str) -> str:
-    return str(DEFAULTS.get(name, fallback))
-
 
 def log(kind: str, message: str) -> None:
     print(f"[{kind}] {message}")
@@ -83,23 +82,20 @@ def log(kind: str, message: str) -> None:
 
 def _opt_str(name: str, default: str) -> str:
     raw = os.environ.get(f"NZBPO_{name}", "")
-    if raw != "":
-        return raw
-    return _default(name, default)
+    return raw if raw != "" else default
 
 
 def _opt_bool(name: str, default: bool) -> bool:
     raw = os.environ.get(f"NZBPO_{name}", "")
     if not raw:
-        raw = _default(name, "yes" if default else "no")
+        return default
     return raw.strip().lower() in {"yes", "true", "1", "on"}
 
 
 def _opt_octal(name: str, default: int) -> int:
     raw = os.environ.get(f"NZBPO_{name}", "")
     if not raw:
-        # Prefer a parseable octal string (0775), not Python's "0o775".
-        raw = _default(name, format(default, "04o"))
+        return default
     s = raw.strip().lower()
     try:
         # Allow "775", "0775", or "0o775".

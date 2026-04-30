@@ -1,0 +1,33 @@
+{
+  "main": "main.py",
+  "name": "PasswordDetector",
+  "displayName": "Password Detector",
+  "kind": "QUEUE",
+  "version": "1.0",
+  "nzbgetMinVersion": "24",
+  "author": "evenwebb",
+  "license": "GPL-3.0",
+  "homepage": "https://github.com/evenwebb/nzbget-user-scripts",
+  "about": "Queue script: detect encrypted RARs early and cancel/pause downloads.",
+  "description": [
+    "Runs on FILE_DOWNLOADED events to detect password-protected/encrypted RARs early (saves bandwidth).",
+    "Actions: mark BAD to cancel, pause via RPC, or do nothing (log only).",
+    "Requires unrar or 7z in PATH."
+  ],
+  "queueEvents": "FILE_DOWNLOADED",
+  "requirements": ["This script requires Python 3.8 and above to be installed on your system."],
+  "options": [
+    { "name": "Events", "displayName": "Events", "value": "FILE_DOWNLOADED", "description": ["Comma-separated queue events."] },
+    { "name": "Action", "displayName": "Action", "value": "mark-bad", "description": ["Action on detection."], "select": ["mark-bad", "pause", "none"] },
+    { "name": "DryRun", "displayName": "DryRun", "value": "no", "description": ["Log actions but do not act."], "select": ["yes", "no"] },
+    { "name": "MaxRarFiles", "displayName": "MaxRarFiles", "value": "5", "description": ["Max RAR files to inspect per run."] },
+    { "name": "CommandTimeoutSec", "displayName": "CommandTimeoutSec", "value": "8", "description": ["Timeout seconds for unrar/7z commands."] },
+    { "name": "UseCache", "displayName": "UseCache", "value": "yes", "description": ["Cache results in NZB directory."], "select": ["yes", "no"] },
+    { "name": "CacheFilename", "displayName": "CacheFilename", "value": ".nzbget_passworddetector.json", "description": ["Cache filename."] },
+    { "name": "Tool", "displayName": "Tool", "value": "auto", "description": ["RAR tool preference."], "select": ["auto", "unrar", "7z"] },
+    { "name": "CountEncryptedHeaders", "displayName": "CountEncryptedHeaders", "value": "yes", "description": ["Treat encrypted headers as protected."], "select": ["yes", "no"] }
+  ],
+  "commands": [],
+  "taskTime": ""
+}
+

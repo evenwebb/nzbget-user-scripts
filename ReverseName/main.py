@@ -54,8 +54,6 @@
 #
 ##############################################################################
 
-from __future__ import annotations
-
 import os
 import re
 from dataclasses import dataclass
@@ -66,26 +64,6 @@ POSTPROCESS_SUCCESS = 93
 POSTPROCESS_ERROR = 94
 POSTPROCESS_NONE = 95
 
-# EDIT FOR YOUR SETUP
-# Script defaults used when NZBGet does not pass NZBPO_* options.
-DEFAULTS = {
-    "RunMode": "success-only",  # success-only | always
-    "DryRun": "no",
-    "RenameFiles": "yes",
-    "RenameDirs": "no",
-    "OnlyIfLooksReversed": "yes",
-    "RequireStrongId": "yes",
-    "StrongIdAllowYear": "yes",
-    "MinScore": "2",
-    "EligibleExts": ".mkv,.mp4,.avi,.mov,.wmv,.m4v,.ts,.m2ts,.srt,.ass,.ssa,.sub,.idx,.sup,.nfo",
-    "SkipIfTargetExists": "no",
-}
-# END EDIT FOR YOUR SETUP
-
-
-def _default(name: str, fallback: str) -> str:
-    return str(DEFAULTS.get(name, fallback))
-
 
 def log(kind: str, message: str) -> None:
     print(f"[{kind}] {message}")
@@ -93,22 +71,20 @@ def log(kind: str, message: str) -> None:
 
 def _opt_str(name: str, default: str) -> str:
     raw = os.environ.get(f"NZBPO_{name}", "")
-    if raw != "":
-        return raw
-    return _default(name, default)
+    return raw if raw != "" else default
 
 
 def _opt_bool(name: str, default: bool) -> bool:
     raw = os.environ.get(f"NZBPO_{name}", "")
     if not raw:
-        raw = _default(name, "yes" if default else "no")
+        return default
     return raw.strip().lower() in {"yes", "true", "1", "on"}
 
 
 def _opt_int(name: str, default: int) -> int:
     raw = os.environ.get(f"NZBPO_{name}", "")
     if not raw:
-        raw = _default(name, str(default))
+        return default
     try:
         return int(raw.strip())
     except ValueError:
@@ -175,7 +151,6 @@ def _normalized_tokens(name: str) -> List[str]:
 
 
 def _token_quality(name: str) -> float:
-    # Rough signal: how many tokens contain at least one letter/digit.
     tokens = _normalized_tokens(name)
     if not tokens:
         return 0.0
@@ -202,31 +177,23 @@ def looks_reversed(
     require_strong_id: bool,
     allow_year: bool,
 ) -> bool:
-    # Rename when reversed form scores higher and crosses threshold.
     s_orig = score_name(original_stem)
     s_rev = score_name(reversed_stem)
 
     if s_rev < min_score or s_rev <= s_orig:
         return False
 
-    # Main safeguard: reversed must contain a strong identifier, and the original typically doesn't.
     if require_strong_id:
         rev_has = has_strong_id(reversed_stem)
         orig_has = has_strong_id(original_stem)
 
-        # If year is allowed, treat it as "strong" only when min_score already passed
-        # (i.e. other release tokens exist). This avoids renaming arbitrary titles with years.
         if allow_year and not rev_has:
             rev_has = has_movie_year(reversed_stem)
             orig_has = orig_has or has_movie_year(original_stem)
 
-        if not rev_has:
-            return False
-        if orig_has:
+        if not rev_has or orig_has:
             return False
 
-    # Additional safeguard: reversed should not degrade token "quality".
-    # (Helps avoid renaming already-normal names.)
     if _token_quality(reversed_stem) < _token_quality(original_stem):
         return False
 
@@ -270,7 +237,6 @@ def build_plan() -> Plan:
 
 
 def iter_targets(root: Path, plan: Plan) -> Iterable[Path]:
-    # Use os.walk to avoid multiple rglob passes on large trees.
     if plan.rename_dirs:
         for dirpath, dirnames, _ in os.walk(root, topdown=False):
             for d in dirnames:
@@ -282,7 +248,6 @@ def iter_targets(root: Path, plan: Plan) -> Iterable[Path]:
 
 
 def with_unique_suffix(target: Path) -> Path:
-    # Adds " (1)", " (2)" style suffix before the extension(s).
     stem, suffix = split_stem_suffix(target.name)
     for i in range(1, 1000):
         candidate = target.with_name(f"{stem} ({i}){suffix}")

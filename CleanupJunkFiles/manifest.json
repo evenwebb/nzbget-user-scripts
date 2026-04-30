@@ -1,0 +1,45 @@
+{
+  "main": "main.py",
+  "name": "CleanupJunkFiles",
+  "displayName": "Cleanup Junk Files",
+  "kind": "POST-PROCESSING",
+  "version": "1.0",
+  "nzbgetMinVersion": "24",
+  "author": "evenwebb",
+  "license": "GPL-3.0",
+  "homepage": "https://github.com/evenwebb/nzbget-user-scripts",
+  "about": "Delete junk files/samples after success (safe, last in order).",
+  "queueEvents": "",
+  "requirements": ["This script requires Python 3.8 and above to be installed on your system."],
+  "description": [
+    "Deletes low-value leftover files after successful processing (NFO-orig, SFV, URL, etc.).",
+    "Can delete sample videos (sample dir + size-guarded *sample* filenames).",
+    "Includes guardrails (Keep rules, optional archive deletion requiring media).",
+    "Recommended to run last in ScriptOrder."
+  ],
+  "options": [
+    { "name": "RunMode", "displayName": "RunMode", "value": "success-only", "description": ["When to run."], "select": ["success-only", "always"] },
+    { "name": "DryRun", "displayName": "DryRun", "value": "no", "description": ["Log actions but do not delete."], "select": ["yes", "no"] },
+    { "name": "DeleteEmptyDirs", "displayName": "DeleteEmptyDirs", "value": "yes", "description": ["Remove empty dirs after cleanup."], "select": ["yes", "no"] },
+    { "name": "DeleteGlobs", "displayName": "DeleteGlobs", "value": "*.sfv,*.srr,*.url,*.nzb,*.nfo-orig,*.jpg,*.jpeg,*.png,*.gif,*.webp,*.lnk,Thumbs.db,.DS_Store", "description": ["Comma-separated globs to delete."] },
+    { "name": "DeletePar2", "displayName": "DeletePar2", "value": "yes", "description": ["Delete par2 files."], "select": ["yes", "no"] },
+    { "name": "DeletePar2Globs", "displayName": "DeletePar2Globs", "value": "*.par2,*.par", "description": ["Globs for par2 files."] },
+    { "name": "DeleteArchives", "displayName": "DeleteArchives", "value": "no", "description": ["Delete RAR/ZIP/7z archives after success."], "select": ["yes", "no"] },
+    { "name": "DeleteArchiveGlobs", "displayName": "DeleteArchiveGlobs", "value": "*.rar,*.r??,*.part??.rar,*.7z,*.zip", "description": ["Globs for archives."] },
+    { "name": "NeverDeleteExts", "displayName": "NeverDeleteExts", "value": ".mkv,.mp4,.avi,.mov,.wmv,.m4v,.ts,.m2ts,.iso,.srt,.ass,.ssa,.sub,.idx,.sup,.nfo", "description": ["Extensions never deleted."] },
+
+    { "name": "DeleteSamples", "displayName": "DeleteSamples", "value": "yes", "description": ["Delete sample videos."], "select": ["yes", "no"] },
+    { "name": "SampleDirNames", "displayName": "SampleDirNames", "value": "sample,samples", "description": ["Folder names treated as sample dirs."] },
+    { "name": "SampleVideoExts", "displayName": "SampleVideoExts", "value": ".mkv,.mp4,.avi,.mov,.wmv,.m4v,.ts,.m2ts", "description": ["Video extensions treated as samples."] },
+    { "name": "SampleMaxSizeMB", "displayName": "SampleMaxSizeMB", "value": "250", "description": ["Max size for *sample* filename deletion (MB)."] },
+
+    { "name": "KeepGlobs", "displayName": "KeepGlobs", "value": "", "description": ["Comma-separated globs to never delete."] },
+    { "name": "KeepDirs", "displayName": "KeepDirs", "value": "", "description": ["Comma-separated dir names; never delete anything under them."] },
+
+    { "name": "ArchiveDeleteRequiresMedia", "displayName": "ArchiveDeleteRequiresMedia", "value": "yes", "description": ["Only delete archives if media exists (guardrail)."], "select": ["yes", "no"] },
+    { "name": "MediaExts", "displayName": "MediaExts", "value": ".mkv,.mp4,.avi,.mov,.wmv,.m4v,.ts,.m2ts,.iso", "description": ["Media extensions used by archive guardrail."] }
+  ],
+  "commands": [],
+  "taskTime": ""
+}
+

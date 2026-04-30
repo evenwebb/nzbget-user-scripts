@@ -1,0 +1,33 @@
+{
+  "main": "main.py",
+  "name": "PermissionsUnraidDefault",
+  "displayName": "Permissions (Unraid Default)",
+  "kind": "POST-PROCESSING",
+  "version": "1.0",
+  "nzbgetMinVersion": "24",
+  "author": "evenwebb",
+  "license": "GPL-3.0",
+  "homepage": "https://github.com/evenwebb/nzbget-user-scripts",
+  "about": "Apply Unraid defaults (nobody:users, 0775/0664) after processing.",
+  "queueEvents": "",
+  "requirements": ["This script requires Python 3.8 and above to be installed on your system."],
+  "description": [
+    "Applies Unraid-style ownership and permissions recursively.",
+    "Fast path: only changes items that differ.",
+    "Docker-friendly: chown failures are warnings by default (configurable)."
+  ],
+  "options": [
+    { "name": "RunMode", "displayName": "RunMode", "value": "success-only", "description": ["When to run."], "select": ["success-only", "always"] },
+    { "name": "DryRun", "displayName": "DryRun", "value": "no", "description": ["Log actions but do not apply."], "select": ["yes", "no"] },
+    { "name": "TargetDir", "displayName": "TargetDir", "value": "directory", "description": ["directory (NZBPP_DIRECTORY) or final (NZBPP_FINALDIR)."], "select": ["directory", "final"] },
+    { "name": "Owner", "displayName": "Owner", "value": "nobody", "description": ["Owner username (empty to skip chown)."] },
+    { "name": "Group", "displayName": "Group", "value": "users", "description": ["Group name (empty to skip chown)."] },
+    { "name": "DirMode", "displayName": "DirMode", "value": "0775", "description": ["Directory mode (octal)."] },
+    { "name": "FileMode", "displayName": "FileMode", "value": "0664", "description": ["File mode (octal)."] },
+    { "name": "IgnoreChownErrors", "displayName": "IgnoreChownErrors", "value": "yes", "description": ["Do not fail job if chown fails."], "select": ["yes", "no"] },
+    { "name": "FollowSymlinks", "displayName": "FollowSymlinks", "value": "no", "description": ["Follow symlinks while walking."], "select": ["yes", "no"] }
+  ],
+  "commands": [],
+  "taskTime": ""
+}
+

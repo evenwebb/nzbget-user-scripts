@@ -1,0 +1,34 @@
+{
+  "main": "main.py",
+  "name": "ReverseName",
+  "displayName": "Reverse Name",
+  "kind": "POST-PROCESSING",
+  "version": "1.0",
+  "nzbgetMinVersion": "24",
+  "author": "evenwebb",
+  "license": "GPL-3.0",
+  "homepage": "https://github.com/evenwebb/nzbget-user-scripts",
+  "about": "Detect and fix reversed filenames (TV + movies, robust heuristics).",
+  "queueEvents": "",
+  "requirements": ["This script requires Python 3.8 and above to be installed on your system."],
+  "description": [
+    "Some releases reverse the filename. This fixes it back using safe heuristics.",
+    "Requires strong identifiers by default (SxxEyy/1x02/date; optional year for movies).",
+    "Recommended to run after unpack and before importers."
+  ],
+  "options": [
+    { "name": "RunMode", "displayName": "RunMode", "value": "success-only", "description": ["When to run."], "select": ["success-only", "always"] },
+    { "name": "DryRun", "displayName": "DryRun", "value": "no", "description": ["Log actions but do not rename."], "select": ["yes", "no"] },
+    { "name": "RenameFiles", "displayName": "RenameFiles", "value": "yes", "description": ["Rename files."], "select": ["yes", "no"] },
+    { "name": "RenameDirs", "displayName": "RenameDirs", "value": "no", "description": ["Rename directories."], "select": ["yes", "no"] },
+    { "name": "OnlyIfLooksReversed", "displayName": "OnlyIfLooksReversed", "value": "yes", "description": ["Only rename when heuristics match."], "select": ["yes", "no"] },
+    { "name": "RequireStrongId", "displayName": "RequireStrongId", "value": "yes", "description": ["Require strong ID in reversed name."], "select": ["yes", "no"] },
+    { "name": "StrongIdAllowYear", "displayName": "StrongIdAllowYear", "value": "yes", "description": ["Allow standalone year as strong ID (movies)."], "select": ["yes", "no"] },
+    { "name": "MinScore", "displayName": "MinScore", "value": "2", "description": ["Minimum heuristic score to rename."] },
+    { "name": "EligibleExts", "displayName": "EligibleExts", "value": ".mkv,.mp4,.avi,.mov,.wmv,.m4v,.ts,.m2ts,.srt,.ass,.ssa,.sub,.idx,.sup,.nfo", "description": ["Extensions eligible for rename."] },
+    { "name": "SkipIfTargetExists", "displayName": "SkipIfTargetExists", "value": "no", "description": ["Skip if target exists (else suffix)."], "select": ["yes", "no"] }
+  ],
+  "commands": [],
+  "taskTime": ""
+}
+

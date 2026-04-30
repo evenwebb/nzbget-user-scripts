@@ -60,7 +60,32 @@
 #
 ##############################################################################
 
-from __future__ import annotations
+NZBGET_CONFIG = r"""
+### NZBGET SCRIPT CONFIGURATION (read by NZBGet; ignored by Python)
+
+RunMode=success-only
+DryRun=no
+DeleteEmptyDirs=yes
+DeleteGlobs=*.sfv,*.srr,*.url,*.nzb,*.nfo-orig,*.jpg,*.jpeg,*.png,*.gif,*.webp,*.lnk,Thumbs.db,.DS_Store
+DeletePar2=yes
+DeletePar2Globs=*.par2,*.par
+DeleteArchives=no
+DeleteArchiveGlobs=*.rar,*.r??,*.part??.rar,*.7z,*.zip
+NeverDeleteExts=.mkv,.mp4,.avi,.mov,.wmv,.m4v,.ts,.m2ts,.iso,.srt,.ass,.ssa,.sub,.idx,.sup,.nfo
+
+DeleteSamples=yes
+SampleDirNames=sample,samples
+SampleVideoExts=.mkv,.mp4,.avi,.mov,.wmv,.m4v,.ts,.m2ts
+SampleMaxSizeMB=250
+
+KeepGlobs=
+KeepDirs=
+
+ArchiveDeleteRequiresMedia=yes
+MediaExts=.mkv,.mp4,.avi,.mov,.wmv,.m4v,.ts,.m2ts,.iso
+
+### NZBGET SCRIPT CONFIGURATION
+"""
 
 import fnmatch
 import os
@@ -74,35 +99,6 @@ POSTPROCESS_SUCCESS = 93
 POSTPROCESS_ERROR = 94
 POSTPROCESS_NONE = 95
 
-# EDIT FOR YOUR SETUP
-# Script defaults used when NZBGet does not pass NZBPO_* options.
-DEFAULTS = {
-    "RunMode": "success-only",  # success-only | always
-    "DryRun": "no",
-    "DeleteEmptyDirs": "yes",
-    "DeleteGlobs": "*.sfv,*.srr,*.url,*.nzb,*.nfo-orig,*.jpg,*.jpeg,*.png,*.gif,*.webp,*.lnk,Thumbs.db,.DS_Store",
-    "DeletePar2": "yes",
-    "DeletePar2Globs": "*.par2,*.par",
-    "DeleteArchives": "no",
-    "DeleteArchiveGlobs": "*.rar,*.r??,*.part??.rar,*.7z,*.zip",
-    "NeverDeleteExts": ".mkv,.mp4,.avi,.mov,.wmv,.m4v,.ts,.m2ts,.iso,.srt,.ass,.ssa,.sub,.idx,.sup,.nfo",
-    "DeleteSamples": "yes",
-    "SampleDirNames": "sample,samples",
-    "SampleVideoExts": ".mkv,.mp4,.avi,.mov,.wmv,.m4v,.ts,.m2ts",
-    "SampleMaxSizeMB": "250",
-    # Keep rules
-    "KeepGlobs": "",
-    "KeepDirs": "",
-    # Archive deletion guardrail
-    "ArchiveDeleteRequiresMedia": "yes",
-    "MediaExts": ".mkv,.mp4,.avi,.mov,.wmv,.m4v,.ts,.m2ts,.iso",
-}
-# END EDIT FOR YOUR SETUP
-
-
-def _default(name: str, fallback: str) -> str:
-    return str(DEFAULTS.get(name, fallback))
-
 
 def log(kind: str, message: str) -> None:
     print(f"[{kind}] {message}")
@@ -110,22 +106,20 @@ def log(kind: str, message: str) -> None:
 
 def _opt_str(name: str, default: str) -> str:
     raw = os.environ.get(f"NZBPO_{name}", "")
-    if raw != "":
-        return raw
-    return _default(name, default)
+    return raw if raw != "" else default
 
 
 def _opt_bool(name: str, default: bool) -> bool:
     raw = os.environ.get(f"NZBPO_{name}", "")
     if not raw:
-        raw = _default(name, "yes" if default else "no")
+        return default
     return raw.strip().lower() in {"yes", "true", "1", "on"}
 
 
 def _opt_int(name: str, default: int) -> int:
     raw = os.environ.get(f"NZBPO_{name}", "")
     if not raw:
-        raw = _default(name, str(default))
+        return default
     try:
         return int(raw.strip())
     except ValueError:
@@ -186,7 +180,7 @@ def _path_parts_lower_rel(root: Path, p: Path) -> Tuple[str, ...]:
     return tuple(part.lower() for part in rel.parts)
 
 
-def _should_keep(plan: Plan, p: Path, rel: str) -> bool:
+def _should_keep(plan: "Plan", p: Path, rel: str) -> bool:
     if plan.keep_globs and _matches_any_glob(rel, plan.keep_globs):
         return True
     if plan.keep_dir_names:
@@ -196,7 +190,7 @@ def _should_keep(plan: Plan, p: Path, rel: str) -> bool:
     return False
 
 
-def _has_unpacked_media(plan: Plan) -> bool:
+def _has_unpacked_media(plan: "Plan") -> bool:
     if not plan.media_exts:
         return False
     for p in _iter_files_recursive(plan.root):

@@ -41,7 +41,17 @@
 #
 ##############################################################################
 
-from __future__ import annotations
+NZBGET_CONFIG = r"""
+### NZBGET SCRIPT CONFIGURATION (read by NZBGet; ignored by Python)
+
+ArtifactDir=download
+CreateMarkerFile=yes
+MaxBytesPerFile=262144
+MaxFiles=40
+PreferSubdirs=_unpack,unpack,logs,log
+
+### NZBGET SCRIPT CONFIGURATION
+"""
 
 import json
 import os
@@ -121,34 +131,18 @@ _SPACE_PATTERNS = [
     ]
 ]
 
-# EDIT FOR YOUR SETUP
-# These are *script defaults* used when NZBGet does not pass NZBPO_* options.
-# NZBGet UI options still override these.
-DEFAULTS = {
-    "ArtifactDir": "download",  # download | final | both
-    "CreateMarkerFile": "yes",  # yes | no
-    "MaxBytesPerFile": "262144",
-    "MaxFiles": "40",
-    "PreferSubdirs": "_unpack,unpack,logs,log",
-}
-# END EDIT FOR YOUR SETUP
-
-
-def _default(name: str, fallback: str) -> str:
-    return str(DEFAULTS.get(name, fallback))
-
 
 def _opt_bool(name: str, default: bool) -> bool:
     raw = os.environ.get(f"NZBPO_{name}", "")
     if not raw:
-        raw = _default(name, "yes" if default else "no")
+        return default
     return raw.strip().lower() in {"yes", "true", "1", "on"}
 
 
 def _opt_int(name: str, default: int) -> int:
     raw = os.environ.get(f"NZBPO_{name}", "")
     if not raw:
-        raw = _default(name, str(default))
+        return default
     try:
         return int(raw.strip())
     except ValueError:
@@ -157,9 +151,7 @@ def _opt_int(name: str, default: int) -> int:
 
 def _opt_str(name: str, default: str) -> str:
     raw = os.environ.get(f"NZBPO_{name}", "")
-    if raw != "":
-        return raw
-    return _default(name, default)
+    return raw if raw != "" else default
 
 
 def log(kind: str, message: str) -> None:

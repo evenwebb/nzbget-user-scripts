@@ -17,7 +17,7 @@ set -o pipefail
 # GitHub ZIP URL (main branch by default). You can also point this at a tagged release ZIP.
 ZIP_URL="https://github.com/evenwebb/nzbget-user-scripts/archive/refs/heads/main.zip"
 
-# NZBGet ScriptDir (where your .py scripts live).
+# NZBGet ScriptDir (where extension folders live).
 # Examples:
 # - Docker: /config/scripts
 # - Bare metal: /opt/nzbget/scripts
@@ -131,38 +131,38 @@ files_equal() {
 }
 
 get_edit_range() {
-  # Prints: "<start_line> <end_line>" or nothing if marker not found.
-  # Markers:
-  #   # EDIT FOR YOUR SETUP
-  #   # END EDIT FOR YOUR SETUP
+  # Deprecated: scripts no longer use EDIT FOR YOUR SETUP blocks.
+  return 1
+}
+
+get_nzbget_config_range() {
+  # Prints: "<start_line> <end_line>" for NZBGET_CONFIG triple-quote blocks.
+  # Start: NZBGET_CONFIG = r"""
+  # End:   """
   local file="$1"
   tr -d '\r' < "$file" | awk '
     BEGIN { start=0; end=0 }
-    start==0 && $0 ~ /^#[[:space:]]*EDIT[[:space:]]+FOR[[:space:]]+YOUR[[:space:]]+SETUP[[:space:]]*$/ { start=NR+1; next }
-    start>0 && end==0 && $0 ~ /^#[[:space:]]*END[[:space:]]+EDIT[[:space:]]+FOR[[:space:]]+YOUR[[:space:]]+SETUP[[:space:]]*$/ { end=NR-1; print start, end; exit }
+    start==0 && $0 ~ /^NZBGET_CONFIG[[:space:]]*=[[:space:]]*r"""/ { start=NR+1; next }
+    start>0 && end==0 && $0 ~ /^"""/ { end=NR-1; print start, end; exit }
     END { }
   '
 }
 
-merge_edit_block() {
-  # Usage: merge_edit_block <dest_existing> <src_new> <out_path>
-  local dest_existing="$1" src_new="$2" out="$3"
-
-  if [[ ! -f "$dest_existing" || "$RESET_CONFIG" == "1" ]]; then
-    cp "$src_new" "$out"
-    return 0
-  fi
+replace_block_with_local() {
+  # Usage: replace_block_with_local <dest_existing> <src_new> <out_path> <range_func_name>
+  # Replaces the block in <src_new> with the corresponding block from <dest_existing>,
+  # based on line ranges produced by <range_func_name>.
+  local dest_existing="$1" src_new="$2" out="$3" range_func="$4"
 
   local s_src e_src s_dest e_dest
-  read -r s_src e_src < <(get_edit_range "$src_new" || true)
-  read -r s_dest e_dest < <(get_edit_range "$dest_existing" || true)
+  read -r s_src e_src < <($range_func "$src_new" || true)
+  read -r s_dest e_dest < <($range_func "$dest_existing" || true)
 
   if [[ -z "${s_src:-}" || -z "${e_src:-}" || -z "${s_dest:-}" || -z "${e_dest:-}" ]]; then
     cp "$src_new" "$out"
     return 0
   fi
 
-  # Replace upstream edit block with local edit block (simple and predictable).
   local tmp clean_src
   tmp="$(mktemp)"
   clean_src="$(mktemp)"
@@ -172,6 +172,19 @@ merge_edit_block() {
   tail -n +"$((e_src + 2))" "$clean_src" >> "$tmp"
   rm -f "$clean_src"
   mv "$tmp" "$out"
+}
+
+merge_local_customizations() {
+  # Usage: merge_local_customizations <dest_existing> <src_new> <out_path>
+  local dest_existing="$1" src_new="$2" out="$3"
+
+  if [[ ! -f "$dest_existing" || "$RESET_CONFIG" == "1" ]]; then
+    cp "$src_new" "$out"
+    return 0
+  fi
+
+  # Preserve NZBGET_CONFIG block (WebUI defaults) (if present)
+  replace_block_with_local "$dest_existing" "$src_new" "$out" get_nzbget_config_range
 }
 
 backup_file() {
@@ -196,7 +209,7 @@ sync_one_file() {
 
   local merged
   merged="$(mktemp)"
-  merge_edit_block "$dest_file" "$src_file" "$merged"
+  merge_local_customizations "$dest_file" "$src_file" "$merged"
 
   if [[ -f "$dest_file" ]] && files_equal "$merged" "$dest_file"; then
     rm -f "$merged"
@@ -299,33 +312,44 @@ main() {
     log "No upstream updater found at: $src_updater"
   fi
 
-  # Update *.py in repo root only (keeps this predictable).
-  local src_script dest_script base
-  while IFS= read -r src_script; do
-    base="$(basename "$src_script")"
-    dest_script="$NZBGET_SCRIPTDIR/$base"
+  # Sync extension folders (each must have manifest.json + main.py).
+  local src_dir folder_name dest_dir existed
+  while IFS= read -r src_dir; do
+    folder_name="$(basename "$src_dir")"
+    dest_dir="$NZBGET_SCRIPTDIR/$folder_name"
 
-    if [[ ! -f "$dest_script" && "$INSTALL_MISSING" != "1" ]]; then
-      log "Skipping not-installed: $base"
+    if [[ ! -d "$dest_dir" && "$INSTALL_MISSING" != "1" ]]; then
+      log "Skipping not-installed: $folder_name/"
       skipped=$((skipped + 1))
       continue
     fi
 
-    local existed=0
-    [[ -f "$dest_script" ]] && existed=1
-    sync_one_file "$src_script" "$dest_script" "$base"
+    existed=0
+    [[ -d "$dest_dir" ]] && existed=1
+    if [[ "$DRY_RUN" == "0" ]]; then
+      mkdir -p "$dest_dir" 2>/dev/null || true
+    fi
+
+    # Update manifest.json
+    sync_one_file "$src_dir/manifest.json" "$dest_dir/manifest.json" "$folder_name/manifest.json"
     case $? in
-      0)
-        if [[ $existed -eq 1 ]]; then
-          updated=$((updated + 1))
-        else
-          installed=$((installed + 1))
-        fi
-        ;;
-      2) skipped=$((skipped + 1)) ;;
+      2) : ;;
+      0) updated=$((updated + 1)) ;;
       *) failed=$((failed + 1)) ;;
     esac
-  done < <(find "$src_root" -maxdepth 1 -type f -name "*.py" 2>/dev/null | sort)
+
+    # Update main.py
+    sync_one_file "$src_dir/main.py" "$dest_dir/main.py" "$folder_name/main.py"
+    case $? in
+      2) : ;;
+      0) updated=$((updated + 1)) ;;
+      *) failed=$((failed + 1)) ;;
+    esac
+
+    if [[ $existed -eq 0 && "$DRY_RUN" == "0" ]]; then
+      installed=$((installed + 1))
+    fi
+  done < <(find "$src_root" -mindepth 1 -maxdepth 1 -type d -exec test -f "{}/manifest.json" -a -f "{}/main.py" \; -print 2>/dev/null | sort)
 
   log "Done. Updated: $updated, Installed: $installed, Skipped: $skipped, Failed: $failed"
 }

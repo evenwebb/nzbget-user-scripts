@@ -2,7 +2,7 @@
 
 Scripts to improve NZBGet automation and your Sonarr/Radarr workflow.
 
-These are **NZBGet post-processing (PP) scripts**. Install them into NZBGet’s `ScriptDir`, make them executable, and enable them via **Settings → EXTENSION SCRIPTS** (globally or per-category).
+These are **NZBGet extensions** (PostProcess + Queue). Install them into NZBGet’s `ScriptDir`, make them executable, and enable/configure them in the WebUI under **Settings → Extensions**.
 
 ---
 
@@ -10,7 +10,7 @@ These are **NZBGet post-processing (PP) scripts**. Install them into NZBGet’s 
 
 - [Scripts](#scripts)
 - [Installation (NZBGet)](#installation-nzbget)
-- [Recommended ScriptOrder](#recommended-scriptorder)
+- [Recommended order](#recommended-order)
 - [Script details](#script-details)
 - [Contributing / Maintenance](#contributing--maintenance)
 - [License](#license)
@@ -30,20 +30,27 @@ Repo: `https://github.com/evenwebb/nzbget-user-scripts`
 
 | Script | Type | Description |
 |:--|:--|:--|
-| **`FailedDownloadClassifier.py`** | PostProcess | Classifies common failures (missing articles/DMCA-like, passworded, bad archive, disk space, etc.) and writes a small artifact into the download folder so you can make smarter retry decisions. |
-| **`CleanupJunkFiles.py`** | PostProcess | Deletes junk files after successful processing (e.g. `.sfv`, `.url`, `.nzb`, optional `.par2`) and can delete **sample videos** safely. Always exits SUCCESS when it runs. |
-| **`ReverseName.py`** | PostProcess | Detects and fixes “reversed filename” obfuscation (robust trigger to avoid false positives). |
-| **`PermissionsUnraidDefault.py`** | PostProcess | Applies Unraid-style default permissions/ownership (`nobody:users`, dirs `0775`, files `0664`) to the download directory. |
-| **`CharacterTranslator.py`** | PostProcess | Fixes filename encoding/mojibake issues, normalizes Unicode, and optionally sanitizes/ASCII-transliterates names for better matching. |
-| **`PasswordDetector.py`** | Queue Script | Detects password-protected RARs early during download and can cancel the NZB to save bandwidth. |
+| **`FailedDownloadClassifier/`** | PostProcess | Classifies common failures (missing articles/DMCA-like, passworded, bad archive, disk space, etc.) and writes a small artifact into the download folder so you can make smarter retry decisions. |
+| **`CleanupJunkFiles/`** | PostProcess | Deletes junk files after successful processing (e.g. `.sfv`, `.url`, `.nzb`, optional `.par2`) and can delete **sample videos** safely. Always exits SUCCESS when it runs. |
+| **`ReverseName/`** | PostProcess | Detects and fixes “reversed filename” obfuscation (robust trigger to avoid false positives). |
+| **`PermissionsUnraidDefault/`** | PostProcess | Applies Unraid-style default permissions/ownership (`nobody:users`, dirs `0775`, files `0664`) to the download directory. |
+| **`CharacterTranslator/`** | PostProcess | Fixes filename encoding/mojibake issues, normalizes Unicode, and optionally sanitizes/ASCII-transliterates names for better matching. |
+| **`PasswordDetector/`** | Queue Script | Detects password-protected RARs early during download and can cancel the NZB to save bandwidth. |
 
 ## Installation (NZBGet)
 
 - **Copy scripts** into NZBGet `ScriptDir`.
-- **Make them executable**:
+- NZBGet v24+ (Extensions UI): use the **manifest-based folders** so options appear in the WebUI:
+  - `FailedDownloadClassifier/`
+  - `CleanupJunkFiles/`
+  - `ReverseName/`
+  - `PermissionsUnraidDefault/`
+  - `CharacterTranslator/`
+  - `PasswordDetector/`
+- **Make them executable** (at minimum the `main.py` files):
 
 ```bash
-chmod +x "FailedDownloadClassifier.py" "CleanupJunkFiles.py" "ReverseName.py" "PermissionsUnraidDefault.py" "CharacterTranslator.py" "PasswordDetector.py"
+chmod +x "FailedDownloadClassifier/main.py" "CleanupJunkFiles/main.py" "ReverseName/main.py" "PermissionsUnraidDefault/main.py" "CharacterTranslator/main.py" "PasswordDetector/main.py"
 ```
 
 ## Keeping scripts updated
@@ -52,56 +59,52 @@ If you install these scripts into your NZBGet `ScriptDir` and want an easy way t
 
 - `nzbget-scripts-updater.sh` (downloads the repo ZIP and updates scripts in-place)
 
-It supports **dry-run**, **backups**, and can optionally only update scripts you already have installed.
+It supports **dry-run**, **backups**, and can optionally only update extensions you already have installed.
 
-To preserve your local script default changes across updates, edit only the block marked:
+Because all settings live in NZBGet’s config (WebUI), updates do not require preserving any in-script config blocks.
 
-- `# EDIT FOR YOUR SETUP`
-- `# END EDIT FOR YOUR SETUP`
+- **Enable extensions** in NZBGet WebUI:
+  - Go to **Settings → Extensions**
+  - Enable/configure each extension (and enable per-category if you prefer)
+  - **All options are configurable in the NZBGet WebUI** (declared in each extension’s `manifest.json`)
+  - Order matters: use **Reorder extensions** to set the post-process run sequence
 
-The updater also **updates itself** (it will replace its own file with the latest upstream version while preserving your local `EDIT FOR YOUR SETUP` block).
+### Recommended order
 
-- **Enable scripts** in NZBGet WebUI:
-  - Go to **Settings → EXTENSION SCRIPTS**
-  - Add scripts to **Extensions** (global or per-category)
-  - Order matters: set **ScriptOrder** so scripts run in the right sequence
-
-### Recommended ScriptOrder
-
-- **`CharacterTranslator.py`**: early (after unpack), before rename/import steps (helps matching)
-- **`ReverseName.py`**: after unpack, before any import scripts (Sonarr/Radarr)
-- **`PermissionsUnraidDefault.py`**: after import (or last if you don’t run import scripts via NZBGet)
-- **`FailedDownloadClassifier.py`**: late (after unpack/par outcomes are known)
-- **`CleanupJunkFiles.py`**: last (after import/notify scripts)
+- **`FailedDownloadClassifier`**: early/neutral (safe; will skip on success)
+- **`CharacterTranslator`**: early (after unpack), before rename/import steps (helps matching)
+- **`ReverseName`**: after unpack, before any import scripts (Sonarr/Radarr)
+- **`PermissionsUnraidDefault`**: after import (or near-last if you don’t run import scripts via NZBGet)
+- **`CleanupJunkFiles`**: last (after import/notify scripts)
 
 Queue scripts:
 
-- **`PasswordDetector.py`**: runs during download on `FILE_DOWNLOADED` events (not part of ScriptOrder)
+- **`PasswordDetector`**: runs during download on `FILE_DOWNLOADED` events (not part of the post-process order)
 
 ### Suggested full setup order (using all scripts)
 
 Queue scripts (event-driven):
 
-1. **`PasswordDetector.py`** (Queue Script): runs while downloading; cancels password-protected RARs early.
+1. **`PasswordDetector`** (Queue Script): runs while downloading; cancels password-protected RARs early.
 
-Post-processing scripts (set in NZBGet `ScriptOrder`, top → bottom):
+Post-processing extensions (set via **Reorder extensions**, top → bottom):
 
-1. **`CharacterTranslator.py`**: fix mojibake/Unicode/sanitize names before anything else.
-2. **`ReverseName.py`**: fix reversed names (best before importers try to match).
-3. **(Your Sonarr/Radarr import script, if you run one via NZBGet)**.
-4. **`PermissionsUnraidDefault.py`**: apply final ownership/modes after files are in their final place.
-5. **`FailedDownloadClassifier.py`**: classify failures (helps decide retry vs stop).
-6. **`CleanupJunkFiles.py`**: delete junk/samples last.
+1. **`FailedDownloadClassifier`**: classifies failures (skips on success).
+2. **`CharacterTranslator`**: fix mojibake/Unicode/sanitize names before anything else.
+3. **`ReverseName`**: fix reversed names (best before importers try to match).
+4. **(Your Sonarr/Radarr import script, if you run one via NZBGet)**.
+5. **`PermissionsUnraidDefault`**: apply final ownership/modes after files are in their final place.
+6. **`CleanupJunkFiles`**: delete junk/samples last.
 
 ---
 
 ## Quick Start
 
 1. Copy scripts into NZBGet `ScriptDir` and `chmod +x` them (see [Installation (NZBGet)](#installation-nzbget)).
-2. In NZBGet WebUI, enable them under **Settings → EXTENSION SCRIPTS → Extensions**.
-3. Set **ScriptOrder** to match the [Recommended ScriptOrder](#recommended-scriptorder).
+2. In NZBGet WebUI, enable them under **Settings → Extensions**.
+3. Use **Reorder extensions** to match the [Recommended order](#recommended-order).
 4. First run:
-   - Set `DryRun=yes` for `ReverseName.py` (and `CleanupJunkFiles.py` if you want to preview deletions),
+   - Set `DryRun=yes` for `ReverseName` (and `CleanupJunkFiles` if you want to preview deletions),
    - then use **Post-process again** on a history item to validate behavior.
 5. Optional: set up the updater:
    - Edit `nzbget-scripts-updater.sh` (`ZIP_URL`, `NZBGET_SCRIPTDIR`, `DRY_RUN`)
@@ -109,7 +112,7 @@ Post-processing scripts (set in NZBGet `ScriptOrder`, top → bottom):
 
 ## Script details
 
-### `FailedDownloadClassifier.py`
+### `FailedDownloadClassifier`
 
 - **Writes** (in `NZBPP_DIRECTORY` and/or `NZBPP_FINALDIR` depending on options):
   - `.nzbget_failure_classification.json`
@@ -124,7 +127,7 @@ Post-processing scripts (set in NZBGet `ScriptOrder`, top → bottom):
   - `PreferSubdirs` (comma-separated)
   - Failure classes include `dmca` vs `missing_articles` when DMCA/takedown hints are found in logs.
 
-### `CleanupJunkFiles.py`
+### `CleanupJunkFiles`
 
 - **Safety**:
   - Runs only when `NZBPP_TOTALSTATUS=SUCCESS` by default.
@@ -145,7 +148,7 @@ Post-processing scripts (set in NZBGet `ScriptOrder`, top → bottom):
   - `ArchiveDeleteRequiresMedia` = `yes` | `no` (guardrail for `DeleteArchives=yes`)
   - `MediaExts` (comma-separated; used by the archive guardrail)
 
-### `ReverseName.py`
+### `ReverseName`
 
 Fixes releases where file/folder names were reversed.
 
@@ -162,7 +165,7 @@ Fixes releases where file/folder names were reversed.
     - Movies: a standalone year `1990`–`2099` **only when** other release tokens exist (controlled by `MinScore`)
   - `StrongIdAllowYear=yes` (default)
 
-### `PermissionsUnraidDefault.py`
+### `PermissionsUnraidDefault`
 
 Applies Unraid-style ownership and permissions to the processed folder.
 
@@ -174,7 +177,7 @@ Applies Unraid-style ownership and permissions to the processed folder.
   - If the script can’t `chown`, it will log a warning but won’t fail the NZBGet job by default (`IgnoreChownErrors=yes`).
   - Uses a fast path (only changes mode/owner when they differ) for better performance on large trees.
 
-### `CharacterTranslator.py`
+### `CharacterTranslator`
 
 Fixes filename encoding issues and normalizes names.
 
@@ -184,7 +187,7 @@ Fixes filename encoding issues and normalizes names.
   - `Sanitize=yes` (replaces unsafe characters like `?` with `_`)
   - `AsciiOnly=no` (keeps non-Latin scripts unless you opt in)
 
-### `PasswordDetector.py`
+### `PasswordDetector`
 
 Queue script that checks downloaded `.rar` files for encryption/password protection **before the download finishes**.
 
@@ -210,15 +213,15 @@ Queue script that checks downloaded `.rar` files for encryption/password protect
 <details>
 <summary><strong>My script changes don’t show up in NZBGet</strong></summary>
 
-- Make sure the file is in `ScriptDir` and is executable (`chmod +x script.py`).
-- Refresh the NZBGet WebUI after changes.
+- Make sure the extension folder is in `ScriptDir` and the `main.py` is executable (`chmod +x ExtensionName/main.py`).
+- NZBGet caches the extension list while you’re on the settings page. Switch **Settings → Downloads → Settings** (or restart NZBGet) to force a rescan.
 - Use **Post-process again** to test changes on an existing history item.
 </details>
 
 <details>
 <summary><strong>Sonarr/Radarr import broke after cleanup</strong></summary>
 
-- Ensure `CleanupJunkFiles.py` is **last** in `ScriptOrder`.
+- Ensure `CleanupJunkFiles` is **last** in the post-process order (**Reorder extensions**).
 - Keep `DeleteArchives=no` unless you’re sure you never need RAR/ZIP volumes after unpack/import.
 - Start with `DryRun=yes` to confirm what would be deleted.
 </details>

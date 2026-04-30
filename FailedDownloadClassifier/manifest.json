@@ -1,0 +1,56 @@
+{
+  "main": "main.py",
+  "name": "FailedDownloadClassifier",
+  "displayName": "Failed Download Classifier",
+  "kind": "POST-PROCESSING",
+  "version": "1.0",
+  "nzbgetMinVersion": "24",
+  "author": "evenwebb",
+  "license": "GPL-3.0",
+  "homepage": "https://github.com/evenwebb/nzbget-user-scripts",
+  "about": "Classify failed downloads (DMCA vs missing articles vs password, etc.).",
+  "queueEvents": "",
+  "requirements": ["This script requires Python 3.8 and above to be installed on your system."],
+  "description": [
+    "Classifies common failure patterns using NZBGet status variables and (optionally) log text found in the download folder.",
+    "Separates DMCA/takedown vs missing-articles when hints are present.",
+    "Writes artifacts into the download folder: .nzbget_failure_classification.json/.txt (and optional marker file)."
+  ],
+  "options": [
+    {
+      "name": "ArtifactDir",
+      "displayName": "ArtifactDir",
+      "value": "download",
+      "description": ["Where to store artifacts: download, final, or both."],
+      "select": ["download", "final", "both"]
+    },
+    {
+      "name": "CreateMarkerFile",
+      "displayName": "CreateMarkerFile",
+      "value": "yes",
+      "description": ["Create marker file FAILURE_<class>.txt."],
+      "select": ["yes", "no"]
+    },
+    {
+      "name": "MaxBytesPerFile",
+      "displayName": "MaxBytesPerFile",
+      "value": "262144",
+      "description": ["Max bytes to read per candidate file."]
+    },
+    {
+      "name": "MaxFiles",
+      "displayName": "MaxFiles",
+      "value": "40",
+      "description": ["Max number of files to scan for evidence."]
+    },
+    {
+      "name": "PreferSubdirs",
+      "displayName": "PreferSubdirs",
+      "value": "_unpack,unpack,logs,log",
+      "description": ["Comma-separated subdirs to scan first."]
+    }
+  ],
+  "commands": [],
+  "taskTime": ""
+}
+

@@ -1,0 +1,36 @@
+{
+  "main": "main.py",
+  "name": "CharacterTranslator",
+  "displayName": "Character Translator",
+  "kind": "POST-PROCESSING",
+  "version": "1.0",
+  "nzbgetMinVersion": "24",
+  "author": "evenwebb",
+  "license": "GPL-3.0",
+  "homepage": "https://github.com/evenwebb/nzbget-user-scripts",
+  "about": "Fix broken encoding (mojibake) + normalize/sanitize filenames.",
+  "queueEvents": "",
+  "requirements": ["This script requires Python 3.8 and above to be installed on your system."],
+  "description": [
+    "Fixes common encoding issues (e.g. CafÃ© -> Café).",
+    "Normalizes Unicode and sanitizes filesystem-unsafe characters for better matching.",
+    "Optional ASCII-only mode is available (lossy)."
+  ],
+  "options": [
+    { "name": "RunMode", "displayName": "RunMode", "value": "success-only", "description": ["When to run."], "select": ["success-only", "always"] },
+    { "name": "DryRun", "displayName": "DryRun", "value": "no", "description": ["Log actions but do not rename."], "select": ["yes", "no"] },
+    { "name": "RenameFiles", "displayName": "RenameFiles", "value": "yes", "description": ["Rename files."], "select": ["yes", "no"] },
+    { "name": "RenameDirs", "displayName": "RenameDirs", "value": "yes", "description": ["Rename directories."], "select": ["yes", "no"] },
+    { "name": "TargetDir", "displayName": "TargetDir", "value": "directory", "description": ["directory (NZBPP_DIRECTORY) or final (NZBPP_FINALDIR)."], "select": ["directory", "final"] },
+    { "name": "Normalization", "displayName": "Normalization", "value": "NFC", "description": ["Unicode normalization form."], "select": ["NFC", "NFKC", "NFD", "NFKD", "none"] },
+    { "name": "FixMojibake", "displayName": "FixMojibake", "value": "yes", "description": ["Attempt to repair UTF-8-as-latin1 mojibake."], "select": ["yes", "no"] },
+    { "name": "Sanitize", "displayName": "Sanitize", "value": "yes", "description": ["Replace filesystem-unsafe characters."], "select": ["yes", "no"] },
+    { "name": "SanitizeReplacement", "displayName": "SanitizeReplacement", "value": "_", "description": ["Replacement for sanitized characters."] },
+    { "name": "CollapseRepeats", "displayName": "CollapseRepeats", "value": "yes", "description": ["Collapse repeated separators."], "select": ["yes", "no"] },
+    { "name": "AsciiOnly", "displayName": "AsciiOnly", "value": "no", "description": ["Transliterate to ASCII (lossy)."], "select": ["yes", "no"] },
+    { "name": "SkipIfTargetExists", "displayName": "SkipIfTargetExists", "value": "no", "description": ["Skip if target exists (else suffix)."], "select": ["yes", "no"] }
+  ],
+  "commands": [],
+  "taskTime": ""
+}
+
