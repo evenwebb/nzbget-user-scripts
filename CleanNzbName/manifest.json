@@ -1,0 +1,47 @@
+{
+  "main": "main.py",
+  "name": "CleanNzbName",
+  "displayName": "Clean NZB Name",
+  "kind": "SCAN",
+  "version": "1.0",
+  "nzbgetMinVersion": "24",
+  "author": "evenwebb",
+  "license": "GPL-3.0",
+  "homepage": "https://github.com/evenwebb/nzbget-user-scripts",
+  "about": "Scan script: strip common indexer/obfuscation/cross-post tails from NZB filenames before queuing.",
+  "queueEvents": "",
+  "requirements": ["This script requires Python 3.8 and above to be installed on your system."],
+  "description": [
+    "Removes tails like -Obfuscated, -NZBGeek, -xpost, [TGx], -BUYMORE, and many other indexer tags.",
+    "Uses compiled patterns with multi-pass passes so stacked suffixes still clean up.",
+    "Configure below, then Save changes in NZBGet so options are written to the config and passed to the script (NZBPO_*)."
+  ],
+  "options": [
+    {
+      "name": "DryRun",
+      "displayName": "Dry run",
+      "value": "no",
+      "description": ["Log the cleaned name only; do not print [NZB] NZBNAME= (no rename in NZBGet)."],
+      "select": ["yes", "no"]
+    },
+    {
+      "name": "ExtraSuffixes",
+      "displayName": "Extra suffixes",
+      "value": "",
+      "description": [
+        "Comma-separated extra literal suffixes to strip (without the .nzb extension), e.g. -MyIndexer,-Foo."
+      ]
+    },
+    {
+      "name": "LegacyD3Strip",
+      "displayName": "Legacy D3 four-char strip",
+      "value": "no",
+      "description": [
+        "Opt-in legacy Clean.py regex (optional -???? before .nzb). Can false-positive on real release tokens."
+      ],
+      "select": ["yes", "no"]
+    }
+  ],
+  "commands": [],
+  "taskTime": ""
+}

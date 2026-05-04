@@ -1,0 +1,81 @@
+{
+  "main": "main.py",
+  "name": "UnderscoreToDot",
+  "displayName": "Underscore To Dot",
+  "kind": "POST-PROCESSING",
+  "version": "1.0",
+  "nzbgetMinVersion": "24",
+  "author": "evenwebb",
+  "license": "GPL-3.0",
+  "homepage": "https://github.com/evenwebb/nzbget-user-scripts",
+  "about": "Replaces underscores with dots in filenames (HONE-style releases) to improve matching and avoid redownload loops.",
+  "queueEvents": "",
+  "requirements": ["This script requires Python 3.8 and above to be installed on your system."],
+  "description": [
+    "Replaces '_' with '.' in download filenames (optional directory names).",
+    "Defaults: success-only, stem-only replacement, collision-safe renames.",
+    "Run after unpack, near Character Translator / before importers.",
+    "Configure below, then Save changes in NZBGet so options are written to the config and passed to the script (NZBPO_*)."
+  ],
+  "options": [
+    {
+      "name": "RunMode",
+      "displayName": "When to run",
+      "value": "success-only",
+      "description": ["success-only: only after NZBPP_TOTALSTATUS=SUCCESS. always: run on every post-process invocation."],
+      "select": ["success-only", "always"]
+    },
+    {
+      "name": "DryRun",
+      "displayName": "Dry run",
+      "value": "no",
+      "description": ["Log renames only; do not rename files or directories."],
+      "select": ["yes", "no"]
+    },
+    {
+      "name": "RenameFiles",
+      "displayName": "Rename files",
+      "value": "yes",
+      "description": ["Rename files under the target directory."],
+      "select": ["yes", "no"]
+    },
+    {
+      "name": "RenameDirs",
+      "displayName": "Rename directories",
+      "value": "no",
+      "description": ["Rename directories (bottom-up) under the target directory."],
+      "select": ["yes", "no"]
+    },
+    {
+      "name": "TargetDir",
+      "displayName": "Target directory",
+      "value": "directory",
+      "description": ["directory: NZBPP_DIRECTORY. final: NZBPP_FINALDIR (falls back to directory if unset)."],
+      "select": ["directory", "final"]
+    },
+    {
+      "name": "ReplaceScope",
+      "displayName": "Replace scope",
+      "value": "stem",
+      "description": ["stem: only the basename before the last dot. all: stem and final extension segment."],
+      "select": ["stem", "all"]
+    },
+    {
+      "name": "EligibleExts",
+      "displayName": "Eligible extensions",
+      "value": "",
+      "description": [
+        "Comma-separated extensions to include (e.g. .mkv,.mp4,.nfo). Leave empty to process all files when Rename files is yes."
+      ]
+    },
+    {
+      "name": "SkipIfTargetExists",
+      "displayName": "Skip if target exists",
+      "value": "no",
+      "description": ["If yes, do not rename when the destination name already exists. If no, add a numeric suffix (1), (2), ..."],
+      "select": ["yes", "no"]
+    }
+  ],
+  "commands": [],
+  "taskTime": ""
+}
