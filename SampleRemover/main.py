@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 ########################################
 ### NZBGET POST-PROCESSING SCRIPT    ###
 #
@@ -68,8 +70,6 @@ DeleteTinyVideos=no
 
 ### NZBGET SCRIPT CONFIGURATION
 """
-
-from __future__ import annotations
 
 import os
 import shutil
