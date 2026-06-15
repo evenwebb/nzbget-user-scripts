@@ -29,6 +29,11 @@ from __future__ import annotations
 # legitimate release tokens; keep off unless you relied on it historically.
 # LegacyD3Strip=no
 #
+# Detect SxxExx or NxNN TV episode patterns in obfuscated names and
+# restructure the name for better Sonarr matching. When detected, the
+# episode identifier is preserved and surrounding tokens are cleaned.
+# DetectTVEpisode=yes
+#
 ##############################################################################
 
 NZBGET_CONFIG = r"""

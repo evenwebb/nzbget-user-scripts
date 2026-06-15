@@ -40,8 +40,6 @@
 #
 # If chown fails, do not mark job as failed.
 # # Auto-detect Docker container user mapping on host (requires docker command).
-DockerAware=no
-IgnoreChownErrors=yes
 #
 # Follow symlinks when walking the tree.
 # FollowSymlinks=no
@@ -63,6 +61,8 @@ DirMode=0775
 FileMode=0664
 
 IgnoreChownErrors=yes
+DockerAware=no
+
 FollowSymlinks=no
 
 ### NZBGET SCRIPT CONFIGURATION
@@ -79,22 +79,18 @@ POSTPROCESS_SUCCESS = 93
 POSTPROCESS_ERROR = 94
 POSTPROCESS_NONE = 95
 
-
 def log(kind: str, message: str) -> None:
     print(f"[{kind}] {message}")
-
 
 def _opt_str(name: str, default: str) -> str:
     raw = os.environ.get(f"NZBPO_{name}", "")
     return raw if raw != "" else default
-
 
 def _opt_bool(name: str, default: bool) -> bool:
     raw = os.environ.get(f"NZBPO_{name}", "")
     if not raw:
         return default
     return raw.strip().lower() in {"yes", "true", "1", "on"}
-
 
 def _opt_octal(name: str, default: int) -> int:
     raw = os.environ.get(f"NZBPO_{name}", "")
@@ -111,13 +107,11 @@ def _opt_octal(name: str, default: int) -> int:
     except ValueError:
         return default
 
-
 def should_run() -> bool:
     mode = _opt_str("RunMode", "success-only").strip().lower()
     if mode == "always":
         return True
     return os.environ.get("NZBPP_TOTALSTATUS", "") == "SUCCESS"
-
 
 def pick_target_dir() -> Optional[Path]:
     directory = os.environ.get("NZBPP_DIRECTORY", "")
@@ -128,7 +122,6 @@ def pick_target_dir() -> Optional[Path]:
     else:
         p = directory
     return Path(p) if p else None
-
 
 @dataclass(frozen=True)
 class Plan:
@@ -142,7 +135,6 @@ class Plan:
     file_mode: int
     ignore_chown_errors: bool
     follow_symlinks: bool
-
 
 def build_plan(root: Path) -> Plan:
     owner = _opt_str("Owner", "nobody").strip()
@@ -162,9 +154,7 @@ def build_plan(root: Path) -> Plan:
         follow_symlinks=_opt_bool("FollowSymlinks", False),
     )
 
-
 _printed_chown_hint = False
-
 
 def _docker_chown_hint() -> None:
     global _printed_chown_hint
@@ -176,7 +166,6 @@ def _docker_chown_hint() -> None:
             "DETAIL",
             "chown failed (likely running unprivileged/in Docker). Hint: run NZBGet container as root or set PUID/PGID so the process can chown, or keep IgnoreChownErrors=yes.",
         )
-
 
 def _maybe_chown(path: Path, plan: Plan, dry_run: bool, ignore_errors: bool) -> bool:
     if not plan.owner and not plan.group:
@@ -196,7 +185,6 @@ def _maybe_chown(path: Path, plan: Plan, dry_run: bool, ignore_errors: bool) -> 
         log("ERROR", msg)
         return False
 
-
 def _uid(owner: str) -> int:
     # Resolve user -> uid, fall back to numeric.
     if owner == "":
@@ -210,7 +198,6 @@ def _uid(owner: str) -> int:
             return int(owner)
         except ValueError:
             return -1
-
 
 def _gid(group: str) -> int:
     # Resolve group -> gid, fall back to numeric.
@@ -226,7 +213,6 @@ def _gid(group: str) -> int:
         except ValueError:
             return -1
 
-
 def _chmod(path: Path, mode: int, dry_run: bool) -> bool:
     if dry_run:
         log("DETAIL", f"[dry-run] chmod {oct(mode)} {path}")
@@ -237,7 +223,6 @@ def _chmod(path: Path, mode: int, dry_run: bool) -> bool:
     except Exception as e:
         log("WARNING", f"chmod failed for {path}: {e}")
         return False
-
 
 def apply_permissions(plan: Plan) -> Tuple[int, int, int]:
     changed = 0
@@ -288,7 +273,6 @@ def apply_permissions(plan: Plan) -> Tuple[int, int, int]:
 
     return changed, chmod_fail, chown_fail_hard
 
-
 def main() -> int:
     if not should_run():
         return POSTPROCESS_NONE
@@ -313,7 +297,6 @@ def main() -> int:
             return POSTPROCESS_ERROR
 
     return POSTPROCESS_SUCCESS
-
 
 if __name__ == "__main__":
     try:

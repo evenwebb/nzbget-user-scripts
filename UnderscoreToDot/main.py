@@ -36,9 +36,11 @@
 # - final: uses NZBPP_FINALDIR (fallback to directory)
 #
 # Where to replace underscores with dots.
-# # Custom character replacements (comma-separated OLD=NEW pairs, applied after underscore->dot).
+# Custom character replacements (comma-separated OLD=NEW pairs, applied after underscore->dot).
 # Example: [=. (=[. )=].
-ReplaceScope=stem
+# CustomReplacements=
+#
+# ReplaceScope=stem
 # - stem: only in the part before the last dot (recommended)
 # - all: stem and extension segment (everything after last dot, without the dot)
 #

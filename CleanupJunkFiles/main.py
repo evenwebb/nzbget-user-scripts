@@ -58,6 +58,24 @@
 # This prevents accidental deletion of legitimate content.
 # SampleMaxSizeMB=250
 #
+# Skip files modified less than this many seconds ago (0 = no minimum age).
+# Prevents deleting files still being written by unpack/extraction.
+# MinAgeSeconds=30
+#
+# File globs (comma-separated) that should never be deleted even if they match
+# delete patterns. These are combined with NeverDeleteExts for safety.
+# KeepGlobs=
+#
+# Directory names (comma-separated) whose contents should never be deleted.
+# KeepDirs=
+#
+# Comma-separated list of media file extensions. Used to determine whether
+# a directory still contains useful media before deleting archives.
+# MediaExts=.mkv,.mp4,.avi,.mov,.wmv,.m4v,.ts,.m2ts,.iso
+#
+# Only delete archives when media files are present in the same directory.
+# ArchiveDeleteRequiresMedia=yes
+#
 ##############################################################################
 
 NZBGET_CONFIG = r"""
