@@ -263,24 +263,6 @@ def main() -> int:
     if dry_run:
         log("INFO", "DRY-RUN enabled: no ffprobe checks will run.")
 
-    # Find ffprobe
-    ffprobe = ffprobe_path
-    if ffprobe == "ffprobe":
-        # Try common paths
-        for candidate in ["ffprobe", "/usr/bin/ffprobe", "/usr/local/bin/ffprobe"]:
-            try:
-                r = subprocess.run(
-                    [candidate, "-version"], capture_output=True, timeout=5
-                )
-                if r.returncode == 0:
-                    ffprobe = candidate
-                    break
-            except (FileNotFoundError, subprocess.TimeoutExpired):
-                continue
-        else:
-            log("ERROR", "ffprobe not found. Install ffmpeg package.")
-            return POSTPROCESS_ERROR
-
     fast_mode = check_mode == "fast"
 
     # Find video files
@@ -295,6 +277,23 @@ def main() -> int:
     if not video_files:
         log("DETAIL", "No video files found to validate.")
         return SCRIPT_SUCCESS
+
+    # Find ffprobe — only needed when there are actually files to check
+    ffprobe = ffprobe_path
+    if ffprobe == "ffprobe":
+        for candidate in ["ffprobe", "/usr/bin/ffprobe", "/usr/local/bin/ffprobe"]:
+            try:
+                r = subprocess.run(
+                    [candidate, "-version"], capture_output=True, timeout=5
+                )
+                if r.returncode == 0:
+                    ffprobe = candidate
+                    break
+            except (FileNotFoundError, subprocess.TimeoutExpired):
+                continue
+        else:
+            log("ERROR", "ffprobe not found. Install ffmpeg package.")
+            return POSTPROCESS_ERROR
 
     log("INFO", f"Found {len(video_files)} video file(s) to validate")
 
