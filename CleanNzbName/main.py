@@ -46,7 +46,7 @@ import re
 from typing import List, Pattern
 
 # NZBGet extension exit codes (post-process, queue, scan, feed, scheduler).
-POSTPROCESS_SUCCESS = 93
+SCRIPT_SUCCESS = 93
 POSTPROCESS_ERROR = 94
 
 
@@ -280,7 +280,7 @@ def main() -> int:
     # NZBGet may invoke scan extensions for any file in NzbDir (e.g. zips); only rewrite .nzb names.
     if not raw.lower().endswith(".nzb"):
         log("DETAIL", f"Skipping non-NZB scan target: {raw!r}")
-        return POSTPROCESS_SUCCESS
+        return SCRIPT_SUCCESS
 
     dry_run = _opt_bool("DryRun", False)
     legacy = _opt_bool("LegacyD3Strip", False)
@@ -290,7 +290,7 @@ def main() -> int:
 
     if not _basename_non_empty(cleaned):
         log("WARNING", "Cleaning would produce an invalid NZB name; leaving unchanged.")
-        return POSTPROCESS_SUCCESS
+        return SCRIPT_SUCCESS
 
     if cleaned != raw:
         log("INFO", f"NZB name: {raw!r} -> {cleaned!r}")
@@ -300,7 +300,7 @@ def main() -> int:
     else:
         log("DETAIL", "NZB name unchanged.")
 
-    return POSTPROCESS_SUCCESS
+    return SCRIPT_SUCCESS
 
 
 if __name__ == "__main__":

@@ -68,15 +68,23 @@ CountEncryptedHeaders=yes
 ### NZBGET SCRIPT CONFIGURATION
 """
 
+from __future__ import annotations
+
 import json
 import os
 import re
 import subprocess
 import time
+import urllib.parse
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from xmlrpc.client import ServerProxy
+
+
+POSTPROCESS_SUCCESS = 93
+POSTPROCESS_ERROR = 94
+POSTPROCESS_NONE = 95
 
 
 def log(kind: str, msg: str) -> None:
@@ -218,7 +226,7 @@ def run_cmd(args: List[str], timeout_sec: int) -> Tuple[int, str]:
             pass
         return 124, out
     except Exception as e:
-        return 127, str(e)
+        return -1, str(e)
 
 
 def is_password_protected_unrar(rar: Path, timeout_sec: int, count_encrypted_headers: bool) -> Tuple[bool, str]:
@@ -307,7 +315,7 @@ def detect_password(rars: List[Path]) -> Tuple[bool, str, Optional[Path]]:
 
 def mark_bad() -> None:
     # Supported queue control command.
-    print("[NZB] MARK=BAD")
+    print("[NZB] MARK=BAD", flush=True)
 
 
 def _rpc_server() -> Optional[ServerProxy]:
@@ -320,7 +328,7 @@ def _rpc_server() -> Optional[ServerProxy]:
             return None
         if host == "0.0.0.0":
             host = "127.0.0.1"
-        url = f"http://{username}:{password}@{host}:{port}/xmlrpc"
+        url = f"http://{urllib.parse.quote(username, safe='')}:{urllib.parse.quote(password, safe='')}@{host}:{port}/xmlrpc"
         return ServerProxy(url)
     except Exception:
         return None
@@ -343,11 +351,11 @@ def pause_nzb(nzb_id: str) -> bool:
 def main() -> int:
     # Only run on configured events.
     if not should_process_event():
-        return 0
+        return POSTPROCESS_NONE
 
     root = nzb_dir()
     if not root or not root.exists():
-        return 0
+        return POSTPROCESS_NONE
 
     nzb_name = os.environ.get("NZBNA_NZBNAME", "") or os.environ.get("NZBNA_FILENAME", "") or "unknown"
     nzb_id = os.environ.get("NZBNA_NZBID", "")
@@ -362,12 +370,12 @@ def main() -> int:
         cache["tool_diag_done"] = True
         write_cache(root, cache)
     if cache.get("status") in {"password", "clear"}:
-        return 0
+        return POSTPROCESS_SUCCESS
 
     max_rars = max(1, _opt_int("MaxRarFiles", 5))
     rars = iter_rar_files(root, max_rars)
     if not rars:
-        return 0
+        return POSTPROCESS_SUCCESS
 
     found, evidence, rar_path = detect_password(rars)
     if found:
@@ -393,23 +401,23 @@ def main() -> int:
         dry_run = _opt_bool("DryRun", False)
 
         if action == "none":
-            return 0
+            return POSTPROCESS_SUCCESS
         if action == "pause":
             if dry_run:
                 log("INFO", "[dry-run] Would pause NZB via RPC (GroupPause)")
-                return 0
+                return POSTPROCESS_SUCCESS
             if pause_nzb(nzb_id):
                 log("INFO", "Paused NZB via RPC (GroupPause).")
-                return 0
+                return POSTPROCESS_SUCCESS
             log("WARNING", "Failed to pause NZB via RPC; falling back to MARK=BAD.")
             mark_bad()
-            return 0
+            return POSTPROCESS_SUCCESS
         if dry_run:
             log("INFO", "[dry-run] Would mark NZB as BAD")
-            return 0
+            return POSTPROCESS_SUCCESS
 
         mark_bad()
-        return 0
+        return POSTPROCESS_SUCCESS
 
     # If we scanned and didn't find a password, remember that too (to avoid repeating).
     write_cache(
@@ -422,7 +430,7 @@ def main() -> int:
         },
     )
 
-    return 0
+    return POSTPROCESS_SUCCESS
 
 
 if __name__ == "__main__":
@@ -430,5 +438,5 @@ if __name__ == "__main__":
         raise SystemExit(main())
     except Exception as e:
         log("ERROR", f"PasswordDetector crashed: {e}")
-        raise SystemExit(0)
+        raise SystemExit(POSTPROCESS_ERROR)
 

@@ -81,6 +81,8 @@ SkipIfTargetExists=no
 ### NZBGET SCRIPT CONFIGURATION
 """
 
+from __future__ import annotations
+
 import os
 import re
 import unicodedata

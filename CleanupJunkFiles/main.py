@@ -87,10 +87,11 @@ MediaExts=.mkv,.mp4,.avi,.mov,.wmv,.m4v,.ts,.m2ts,.iso
 ### NZBGET SCRIPT CONFIGURATION
 """
 
+from __future__ import annotations
+
 import fnmatch
 import os
 import re
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, List, Set, Tuple
@@ -190,11 +191,12 @@ def _should_keep(plan: "Plan", p: Path, rel: str) -> bool:
     return False
 
 
-def _has_unpacked_media(plan: "Plan") -> bool:
-    if not plan.media_exts:
-        return False
-    for p in _iter_files_recursive(plan.root):
-        if p.suffix.lower() in plan.media_exts:
+def _should_keep_dir(plan: Plan, d: Path, rel: str) -> bool:
+    if plan.keep_globs and _matches_any_glob(rel, plan.keep_globs):
+        return True
+    if plan.keep_dir_names:
+        parts = _path_parts_lower_rel(plan.root, d)
+        if any(part in plan.keep_dir_names for part in parts):
             return True
     return False
 
@@ -313,31 +315,45 @@ def delete_files(plan: Plan) -> int:
     if plan.delete_par2:
         base_globs.extend(plan.delete_par2_globs)
 
-    allow_archive_delete = plan.delete_archives
-    if plan.delete_archives and plan.archive_delete_requires_media and not _has_unpacked_media(plan):
-        allow_archive_delete = False
-        log("DETAIL", "Archive deletion skipped: no unpacked media detected (ArchiveDeleteRequiresMedia=yes).")
+    to_delete: List[Tuple[Path, str]] = []
+    archive_candidates: List[Tuple[Path, str]] = []
+    found_media = False
 
-    globs = base_globs + (list(plan.delete_archive_globs) if allow_archive_delete else [])
-
-    deleted = 0
     for p in _iter_files_recursive(plan.root):
         rel = str(p.relative_to(plan.root))
         ext = p.suffix.lower()
+
+        # Track media files during the same walk (avoids a second full tree walk).
+        if not found_media and ext in plan.media_exts:
+            found_media = True
+
         if ext in plan.never_delete_exts:
             continue
         if _should_keep(plan, p, rel):
             continue
 
-        if plan.delete_archives and _is_archive_volume(p.name):
-            # extra allow for r00/r01 even if glob misses it
-            match = allow_archive_delete
-        else:
-            match = _matches_any_glob(rel, globs)
+        is_archive = False
+        if plan.delete_archives:
+            if _is_archive_volume(p.name):
+                is_archive = True
+            elif _matches_any_glob(rel, plan.delete_archive_globs):
+                is_archive = True
 
-        if not match:
+        if is_archive:
+            archive_candidates.append((p, rel))
             continue
 
+        if _matches_any_glob(rel, base_globs):
+            to_delete.append((p, rel))
+
+    # Archive deletion decision based on media found during the walk.
+    allow_archive_delete = plan.delete_archives
+    if plan.delete_archives and plan.archive_delete_requires_media and not found_media:
+        allow_archive_delete = False
+        log("DETAIL", "Archive deletion skipped: no unpacked media detected (ArchiveDeleteRequiresMedia=yes).")
+
+    deleted = 0
+    for p, rel in to_delete:
         if plan.dry_run:
             log("INFO", f"[dry-run] Would delete: {rel}")
             deleted += 1
@@ -350,10 +366,24 @@ def delete_files(plan: Plan) -> int:
         except OSError as e:
             log("WARNING", f"Failed to delete {rel}: {e}")
 
+    if allow_archive_delete:
+        for p, rel in archive_candidates:
+            if plan.dry_run:
+                log("INFO", f"[dry-run] Would delete: {rel}")
+                deleted += 1
+                continue
+
+            try:
+                p.unlink()
+                log("INFO", f"Deleted: {rel}")
+                deleted += 1
+            except OSError as e:
+                log("WARNING", f"Failed to delete {rel}: {e}")
+
     return deleted
 
 
-def delete_empty_dirs(root: Path, dry_run: bool) -> int:
+def delete_empty_dirs(root: Path, dry_run: bool, plan: Plan) -> int:
     removed = 0
     # Walk bottom-up so children are removed first.
     for d in sorted([p for p in root.rglob("*") if p.is_dir()], reverse=True):
@@ -361,6 +391,8 @@ def delete_empty_dirs(root: Path, dry_run: bool) -> int:
             if any(d.iterdir()):
                 continue
             rel = str(d.relative_to(root))
+            if _should_keep_dir(plan, d, rel):
+                continue
             if dry_run:
                 log("INFO", f"[dry-run] Would remove empty dir: {rel}")
                 removed += 1
@@ -382,7 +414,7 @@ def main() -> int:
     deleted = delete_samples(plan) + delete_files(plan)
     removed_dirs = 0
     if plan.delete_empty_dirs and plan.root and plan.root.exists() and plan.root.is_dir():
-        removed_dirs = delete_empty_dirs(plan.root, plan.dry_run)
+        removed_dirs = delete_empty_dirs(plan.root, plan.dry_run, plan)
 
     log("INFO", f"Cleanup complete: deleted={deleted}, empty_dirs_removed={removed_dirs}")
     return POSTPROCESS_SUCCESS

@@ -31,6 +31,11 @@
 # RenameFiles=yes
 # RenameDirs=no
 #
+# Apply to which directory.
+# TargetDir=directory
+# - directory: uses NZBPP_DIRECTORY
+# - final: uses NZBPP_FINALDIR (fallback to directory)
+#
 # Only rename when the reversed name "looks right" (recommended).
 # OnlyIfLooksReversed=yes
 #
@@ -54,11 +59,31 @@
 #
 ##############################################################################
 
+from __future__ import annotations
+
+NZBGET_CONFIG = r"""
+### NZBGET SCRIPT CONFIGURATION (read by NZBGet; ignored by Python)
+
+RunMode=success-only
+DryRun=no
+RenameFiles=yes
+RenameDirs=no
+TargetDir=directory
+OnlyIfLooksReversed=yes
+RequireStrongId=yes
+StrongIdAllowYear=yes
+MinScore=2
+EligibleExts=.mkv,.mp4,.avi,.mov,.wmv,.m4v,.ts,.m2ts,.srt,.ass,.ssa,.sub,.idx,.sup,.nfo
+SkipIfTargetExists=no
+
+### NZBGET SCRIPT CONFIGURATION
+"""
+
 import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List, Set, Tuple
+from typing import Iterable, List, Optional, Set, Tuple
 
 POSTPROCESS_SUCCESS = 93
 POSTPROCESS_ERROR = 94
@@ -200,6 +225,17 @@ def looks_reversed(
     return True
 
 
+def pick_target_dir() -> Optional[Path]:
+    directory = os.environ.get("NZBPP_DIRECTORY", "")
+    finaldir = os.environ.get("NZBPP_FINALDIR", "")
+    mode = _opt_str("TargetDir", "directory").strip().lower()
+    if mode == "final":
+        p = finaldir or directory
+    else:
+        p = directory
+    return Path(p) if p else None
+
+
 @dataclass
 class Plan:
     root: Path
@@ -214,9 +250,7 @@ class Plan:
     skip_if_target_exists: bool
 
 
-def build_plan() -> Plan:
-    directory = os.environ.get("NZBPP_DIRECTORY", "")
-    root = Path(directory) if directory else Path()
+def build_plan(root: Path) -> Plan:
     return Plan(
         root=root,
         dry_run=_opt_bool("DryRun", False),
@@ -324,7 +358,12 @@ def main() -> int:
     if not should_run():
         return POSTPROCESS_NONE
 
-    plan = build_plan()
+    root = pick_target_dir()
+    if not root:
+        log("DETAIL", "No target directory found (NZBPP_DIRECTORY/NZBPP_FINALDIR missing).")
+        return POSTPROCESS_NONE
+
+    plan = build_plan(root)
     changed = process(plan)
     log("INFO", f"Reverse-name complete: renamed={changed}")
     return POSTPROCESS_SUCCESS

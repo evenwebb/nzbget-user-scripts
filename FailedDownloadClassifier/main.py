@@ -53,6 +53,8 @@ PreferSubdirs=_unpack,unpack,logs,log
 ### NZBGET SCRIPT CONFIGURATION
 """
 
+from __future__ import annotations
+
 import json
 import os
 import re
@@ -421,8 +423,6 @@ def main() -> int:
 
     # Collect "structured" evidence first.
     env_evidence = _env_get(
-        "NZBPP_STATUS",
-        "NZBPP_TOTALSTATUS",
         "NZBPP_PARSTATUS",
         "NZBPP_UNPACKSTATUS",
         "NZBPP_PARERROR",

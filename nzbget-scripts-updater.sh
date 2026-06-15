@@ -130,11 +130,6 @@ files_equal() {
   cmp -s <(normalize_for_compare "$a") <(normalize_for_compare "$b")
 }
 
-get_edit_range() {
-  # Deprecated: scripts no longer use EDIT FOR YOUR SETUP blocks.
-  return 1
-}
-
 get_nzbget_config_range() {
   # Prints: "<start_line> <end_line>" for NZBGET_CONFIG triple-quote blocks.
   # Start: NZBGET_CONFIG = r"""
