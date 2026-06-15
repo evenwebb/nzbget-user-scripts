@@ -36,7 +36,9 @@
 # - final: uses NZBPP_FINALDIR (fallback to directory)
 #
 # Where to replace underscores with dots.
-# ReplaceScope=stem
+# # Custom character replacements (comma-separated OLD=NEW pairs, applied after underscore->dot).
+# Example: [=. (=[. )=].
+ReplaceScope=stem
 # - stem: only in the part before the last dot (recommended)
 # - all: stem and extension segment (everything after last dot, without the dot)
 #
@@ -57,6 +59,7 @@ DryRun=no
 RenameFiles=yes
 RenameDirs=no
 TargetDir=directory
+CustomReplacements=
 ReplaceScope=stem
 EligibleExts=
 SkipIfTargetExists=no

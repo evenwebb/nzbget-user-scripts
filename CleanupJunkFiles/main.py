@@ -78,6 +78,10 @@ SampleDirNames=sample,samples
 SampleVideoExts=.mkv,.mp4,.avi,.mov,.wmv,.m4v,.ts,.m2ts
 SampleMaxSizeMB=250
 
+# Skip files modified less than this many seconds ago (0 = no minimum age).
+MinAgeSeconds=30
+
+
 KeepGlobs=
 KeepDirs=
 

@@ -39,7 +39,9 @@
 # FileMode=0664
 #
 # If chown fails, do not mark job as failed.
-# IgnoreChownErrors=yes
+# # Auto-detect Docker container user mapping on host (requires docker command).
+DockerAware=no
+IgnoreChownErrors=yes
 #
 # Follow symlinks when walking the tree.
 # FollowSymlinks=no

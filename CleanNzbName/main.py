@@ -38,6 +38,11 @@ DryRun=no
 ExtraSuffixes=
 LegacyD3Strip=no
 
+# Detect SxxExx patterns in obfuscated names and restructure for better
+# Sonarr matching. When an episode pattern is found, the name is reordered
+# to put show-like tokens before the episode identifier.
+DetectTVEpisode=yes
+
 ### NZBGET SCRIPT CONFIGURATION
 """
 
@@ -224,11 +229,44 @@ def _strip_once(name: str, patterns: List[Pattern[str]]) -> str:
     return name
 
 
+# SxxExx or NxNN episode pattern
+_TV_EPISODE_RE = re.compile(
+    r"""(?ix)
+    (?P<prefix>.*?)           # everything before episode marker
+    (?P<ep>[sS]?\\d{1,2}[eExX]\\d{2,3})  # S01E02, 1x02, 01x02
+    (?P<suffix>.*)            # everything after episode marker
+    """
+)
+
+
+def _restructure_tv_episode(name: str) -> str:
+    """Detect embedded SxxExx and reorder name for better Sonarr matching."""
+    stem = name[:-4] if name.lower().endswith(".nzb") else name
+    ext = ".nzb" if name.lower().endswith(".nzb") else ""
+
+    m = _TV_EPISODE_RE.match(stem)
+    if not m:
+        return name
+
+    prefix = m.group("prefix").strip(".- _")
+    ep = m.group("ep").upper()
+    suffix = m.group("suffix").strip(".- _")
+
+    if len(prefix) < 2 or not suffix:
+        return name
+
+    prefix_clean = re.sub(r"[.\-_ ]+", ".", prefix)
+    suffix_clean = re.sub(r"[.\-_ ]+", ".", suffix)
+
+    return f"{prefix_clean}.{ep}.{suffix_clean}{ext}"
+
+
 def clean_nzb_name(
     name: str,
     *,
     extra_suffixes_csv: str,
     legacy_d3: bool,
+    detect_tv_episode: bool = False,
     max_passes: int = 24,
 ) -> str:
     patterns: List[Pattern[str]] = list(_COMPILED_DEFAULT)
@@ -243,6 +281,9 @@ def clean_nzb_name(
             current = _LEGACY_D3.sub(r"\1.nzb", current)
         if current == prev:
             break
+
+    if detect_tv_episode:
+        current = _restructure_tv_episode(current)
 
     return current
 
@@ -286,7 +327,8 @@ def main() -> int:
     legacy = _opt_bool("LegacyD3Strip", False)
     extras = _opt_str("ExtraSuffixes", "")
 
-    cleaned = clean_nzb_name(raw, extra_suffixes_csv=extras, legacy_d3=legacy)
+    detect_tv = _opt_bool("DetectTVEpisode", True)
+    cleaned = clean_nzb_name(raw, extra_suffixes_csv=extras, legacy_d3=legacy, detect_tv_episode=detect_tv)
 
     if not _basename_non_empty(cleaned):
         log("WARNING", "Cleaning would produce an invalid NZB name; leaving unchanged.")
