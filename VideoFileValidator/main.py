@@ -56,6 +56,11 @@ from __future__ import annotations
 # Path to ffprobe (usually in PATH; set if custom installation).
 # FfprobePath=ffprobe
 #
+# Auto-install ffmpeg if ffprobe is missing (requires container with apt/apk).
+# Detects Debian/Ubuntu (hotio, apt-get) or Alpine (linuxserver, apk) and
+# installs ffmpeg automatically. Requires root/sudo in the container.
+# AutoInstallFfprobe=no
+#
 ##############################################################################
 
 NZBGET_CONFIG = r"""
@@ -70,12 +75,14 @@ FastProbeSeconds=5
 MinDurationSeconds=1
 FailureAction=log-only
 FfprobePath=ffprobe
+AutoInstallFfprobe=no
 
 ### NZBGET SCRIPT CONFIGURATION
 """
 
 import json
 import os
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
@@ -239,6 +246,121 @@ def _check_video(
     return issues
 
 
+def _resolve_ffprobe(ffprobe_path: str, auto_install: bool) -> Optional[str]:
+    """Find ffprobe binary. Optionally auto-install ffmpeg if missing."""
+
+    # First try: explicit path or PATH lookup
+    if ffprobe_path != "ffprobe":
+        if _probe_exists(ffprobe_path):
+            return ffprobe_path
+        log("WARNING", f"ffprobe not found at configured path: {ffprobe_path}")
+
+    # Second try: search common paths
+    for candidate in ["ffprobe", "/usr/bin/ffprobe", "/usr/local/bin/ffprobe"]:
+        if _probe_exists(candidate):
+            return candidate
+
+    if not auto_install:
+        return None
+
+    # Third try: auto-install via detected package manager
+    log("INFO", "ffprobe not found; attempting auto-install...")
+
+    pkg_manager = _detect_package_manager()
+    if pkg_manager is None:
+        log("WARNING", "Could not detect apt-get or apk. Cannot auto-install ffmpeg.")
+        return None
+
+    if not _install_ffmpeg(pkg_manager):
+        return None
+
+    # Retry after install
+    for candidate in ["ffprobe", "/usr/bin/ffprobe", "/usr/local/bin/ffprobe"]:
+        if _probe_exists(candidate):
+            log("INFO", f"ffprobe installed successfully: {candidate}")
+            return candidate
+
+    return None
+
+
+def _probe_exists(path: str) -> bool:
+    """Check if a binary exists and can be executed."""
+    try:
+        r = subprocess.run([path, "-version"], capture_output=True, timeout=5)
+        return r.returncode == 0
+    except (FileNotFoundError, subprocess.TimeoutExpired, PermissionError):
+        return False
+
+
+def _detect_package_manager() -> Optional[str]:
+    """Detect available package manager in the container.
+
+    Returns 'apt-get', 'apk', or None.
+    hotio/nzbget uses Debian/Ubuntu (apt-get).
+    linuxserver/nzbget uses Alpine (apk).
+    """
+    # Check for apt-get (Debian/Ubuntu — hotio)
+    if shutil.which("apt-get"):
+        # Verify it actually works (may exist but be non-functional in some containers)
+        try:
+            r = subprocess.run(
+                ["apt-get", "--version"], capture_output=True, timeout=5
+            )
+            if r.returncode == 0:
+                return "apt-get"
+        except (FileNotFoundError, subprocess.TimeoutExpired, PermissionError):
+            pass
+
+    # Check for apk (Alpine — linuxserver)
+    if shutil.which("apk"):
+        try:
+            r = subprocess.run(
+                ["apk", "--version"], capture_output=True, timeout=5
+            )
+            if r.returncode == 0:
+                return "apk"
+        except (FileNotFoundError, subprocess.TimeoutExpired, PermissionError):
+            pass
+
+    return None
+
+
+def _install_ffmpeg(pkg_manager: str) -> bool:
+    """Install ffmpeg via the given package manager. Returns True on success."""
+    pkg = "ffmpeg"
+
+    try:
+        if pkg_manager == "apt-get":
+            log("INFO", "Detected Debian/Ubuntu (hotio). Running: apt-get update && apt-get install -y ffmpeg")
+            r1 = subprocess.run(
+                ["apt-get", "update"], capture_output=True, text=True, timeout=120
+            )
+            if r1.returncode != 0:
+                log("WARNING", f"apt-get update failed (exit {r1.returncode}): {r1.stderr[-200:]}")
+                return False
+            r2 = subprocess.run(
+                ["apt-get", "install", "-y", pkg], capture_output=True, text=True, timeout=120
+            )
+            if r2.returncode == 0:
+                return True
+            log("WARNING", f"apt-get install ffmpeg failed (exit {r2.returncode}): {r2.stderr[-200:]}")
+            return False
+
+        elif pkg_manager == "apk":
+            log("INFO", "Detected Alpine (linuxserver). Running: apk add --no-cache ffmpeg")
+            r = subprocess.run(
+                ["apk", "add", "--no-cache", pkg], capture_output=True, text=True, timeout=120
+            )
+            if r.returncode == 0:
+                return True
+            log("WARNING", f"apk add ffmpeg failed (exit {r.returncode}): {r.stderr[-200:]}")
+            return False
+    except (subprocess.TimeoutExpired, PermissionError, OSError) as e:
+        log("WARNING", f"Package install failed: {e}")
+
+    return False
+
+
 def main() -> int:
     if not should_run():
         log("DETAIL", "Skipping (RunMode does not allow execution).")
@@ -279,21 +401,10 @@ def main() -> int:
         return SCRIPT_SUCCESS
 
     # Find ffprobe — only needed when there are actually files to check
-    ffprobe = ffprobe_path
-    if ffprobe == "ffprobe":
-        for candidate in ["ffprobe", "/usr/bin/ffprobe", "/usr/local/bin/ffprobe"]:
-            try:
-                r = subprocess.run(
-                    [candidate, "-version"], capture_output=True, timeout=5
-                )
-                if r.returncode == 0:
-                    ffprobe = candidate
-                    break
-            except (FileNotFoundError, subprocess.TimeoutExpired):
-                continue
-        else:
-            log("ERROR", "ffprobe not found. Install ffmpeg package.")
-            return POSTPROCESS_ERROR
+    ffprobe = _resolve_ffprobe(ffprobe_path, _opt_bool("AutoInstallFfprobe", False))
+    if ffprobe is None:
+        log("ERROR", "ffprobe not found. Install ffmpeg package or set AutoInstallFfprobe=yes.")
+        return POSTPROCESS_ERROR
 
     log("INFO", f"Found {len(video_files)} video file(s) to validate")
 
