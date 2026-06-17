@@ -4,6 +4,8 @@
 #
 # Failed Download Classifier
 #
+# Repository: nzbget-user-scripts
+#
 # Classifies common failure patterns (DMCA/missing articles/password/bad archive/etc.)
 # using NZBGet status variables and (optionally) error text found in the download folder.
 #

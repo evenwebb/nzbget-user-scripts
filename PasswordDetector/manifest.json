@@ -8,6 +8,7 @@
   "author": "evenwebb",
   "license": "GPL-3.0",
   "homepage": "https://github.com/evenwebb/nzbget-user-scripts",
+  "repository": "nzbget-user-scripts",
   "about": "Queue script: detect encrypted RARs early and cancel/pause downloads.",
   "description": [
     "Runs on FILE_DOWNLOADED events to detect password-protected/encrypted RARs early (saves bandwidth).",

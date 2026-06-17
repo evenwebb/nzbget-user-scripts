@@ -6,6 +6,8 @@ from __future__ import annotations
 #
 # NZBGet Health Monitor
 #
+# Repository: nzbget-user-scripts
+#
 # Monitors NZBGet server health metrics via the JSON-RPC API and alerts
 # on anomalies: stalled downloads, high failure rate, queue growth, low
 # disk space, and paused/stopped server state.

@@ -4,6 +4,8 @@
 #
 # CharacterTranslator (Filename Encoding Fixer)
 #
+# Repository: nzbget-user-scripts
+#
 # Fixes common filename encoding / mojibake issues (e.g. "Ã©" -> "é"),
 # normalizes Unicode (NFC/NFKC), and optionally sanitizes filesystem-unsafe
 # characters for better Sonarr/Radarr matching.

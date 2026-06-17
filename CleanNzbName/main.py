@@ -6,6 +6,8 @@ from __future__ import annotations
 #
 # Clean NZB Name
 #
+# Repository: nzbget-user-scripts
+#
 # Strips common indexer / obfuscation / cross-post suffixes from the NZB
 # filename before the job is queued. Output uses NZBGet's scan control line:
 #   [NZB] NZBNAME=...

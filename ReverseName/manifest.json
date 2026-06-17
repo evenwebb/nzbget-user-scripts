@@ -8,6 +8,7 @@
   "author": "evenwebb",
   "license": "GPL-3.0",
   "homepage": "https://github.com/evenwebb/nzbget-user-scripts",
+  "repository": "nzbget-user-scripts",
   "about": "Detect and fix reversed filenames (TV + movies, robust heuristics).",
   "queueEvents": "",
   "requirements": ["This script requires Python 3.8 and above to be installed on your system."],

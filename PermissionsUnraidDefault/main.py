@@ -4,6 +4,8 @@
 #
 # Permissions (Unraid Default)
 #
+# Repository: nzbget-user-scripts
+#
 # Applies Unraid-style ownership and permissions to the download directory:
 # - Owner/Group: nobody:users (configurable)
 # - Directories: 0775 (configurable)

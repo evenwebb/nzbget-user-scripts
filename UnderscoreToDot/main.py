@@ -4,6 +4,8 @@
 #
 # Underscore To Dot
 #
+# Repository: nzbget-user-scripts
+#
 # Replaces underscores with dots in filenames (and optionally directory names)
 # so poorly named indexer releases (often HONE-style) match Sonarr/Radarr scene
 # naming and avoid redownload loops.

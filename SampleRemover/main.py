@@ -6,6 +6,8 @@ from __future__ import annotations
 #
 # Sample Remover
 #
+# Repository: nzbget-user-scripts
+#
 # Detects and removes sample video files left after usenet/torrent downloads.
 # Uses name matching, size thresholds, and directory detection to identify
 # sample files without touching real content.

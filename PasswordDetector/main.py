@@ -4,6 +4,8 @@
 #
 # PasswordDetector
 #
+# Repository: nzbget-user-scripts
+#
 # Detects password-protected/encrypted RAR archives early during downloading.
 # Runs on FILE_DOWNLOADED events and scans the NZB's destination directory for
 # .rar volumes. If encryption is detected, it can cancel the NZB immediately.

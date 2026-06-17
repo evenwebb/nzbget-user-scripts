@@ -4,6 +4,8 @@
 #
 # Reverse Name
 #
+# Repository: nzbget-user-scripts
+#
 # Some release groups reverse the file/folder names (e.g. "vkm.10E20S..." etc).
 # This script detects likely reversed names and renames them back.
 #

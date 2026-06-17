@@ -15,7 +15,8 @@
 # Configuration (edit script variables below):
 #   - SOURCE_MODE: zip or local
 #   - ZIP_URL / REPO_DIR / NZBGET_SCRIPTDIR
-#   - FETCH_UPDATES / CLEAR_CACHE / INSTALL_MISSING
+#   - FETCH_UPDATES / CLEAR_CACHE / INSTALL_MISSING / UPDATE_SELF
+#   - INSTALL_UPDATER_IN_SCRIPTDIR
 #   - DRY_RUN / BACKUP_DIR / WORK_DIR / RESET_CONFIG
 #   - INCLUDE_FOLDERS / EXCLUDE_FOLDERS
 #   - DOWNLOAD_CONNECT_TIMEOUT / DOWNLOAD_MAX_TIME
@@ -23,11 +24,18 @@
 # Note: Progress and errors print to stdout; NZBGet and cron logs show that output.
 #
 # Author: https://github.com/evenwebb
+# Repository: nzbget-user-scripts
 # Project: https://github.com/evenwebb/nzbget-user-scripts
 # License: GPL-3.0
 
 set -u
 set -o pipefail
+
+# Repository identity (used for ZIP downloads, cache paths, and self-update).
+GITHUB_USER="evenwebb"
+GITHUB_REPO="nzbget-user-scripts"
+GITHUB_BRANCH="main"
+UPDATER_BASENAME="nzbget-scripts-updater.sh"
 
 ###############################################################################
 # EDIT FOR YOUR SETUP
@@ -39,10 +47,11 @@ set -o pipefail
 SOURCE_MODE="zip"
 
 # GitHub ZIP URL (main branch by default). You can also point this at a tagged release ZIP.
-ZIP_URL="https://github.com/evenwebb/nzbget-user-scripts/archive/refs/heads/main.zip"
+# Leave empty to use https://github.com/${GITHUB_USER}/${GITHUB_REPO}/archive/refs/heads/${GITHUB_BRANCH}.zip
+ZIP_URL=""
 
 # Local checkout of this repo (only used when SOURCE_MODE="local")
-REPO_DIR="/path/to/nzbget-user-scripts"
+REPO_DIR="/path/to/${GITHUB_REPO}"
 
 # NZBGet ScriptDir (where extension folders live).
 # Examples:
@@ -72,6 +81,14 @@ CLEAR_CACHE="0"
 # 1 = install extensions that do not already exist in ScriptDir
 # 0 = update only extensions that already exist (recommended default)
 INSTALL_MISSING="0"
+
+# 1 = update this script from the repo (preserves EDIT FOR YOUR SETUP settings)
+# 0 = skip self-update
+UPDATE_SELF="1"
+
+# 1 = also install/update a copy of this script in NZBGET_SCRIPTDIR
+# 0 = only update the copy you are running (recommended if you run it from elsewhere)
+INSTALL_UPDATER_IN_SCRIPTDIR="1"
 
 # 1 = overwrite scripts as-is (no merge of NZBGET_CONFIG / EDIT blocks)
 # 0 = preserve local config values by merging (recommended default)
@@ -307,7 +324,15 @@ clear_cache_if_requested() {
   ensure_work_dir || return 1
   log_stderr "Clearing cache in WORK_DIR: $WORK_DIR"
   rm -rf "$WORK_DIR/extracted" 2>/dev/null || true
-  rm -f "$WORK_DIR/nzbget-user-scripts.zip" 2>/dev/null || true
+  rm -f "$WORK_DIR/${GITHUB_REPO}.zip" 2>/dev/null || true
+}
+
+resolve_zip_url() {
+  if [[ -n "$ZIP_URL" ]]; then
+    echo "$ZIP_URL"
+    return 0
+  fi
+  echo "https://github.com/${GITHUB_USER}/${GITHUB_REPO}/archive/refs/heads/${GITHUB_BRANCH}.zip"
 }
 
 prepare_source_repo() {
@@ -325,24 +350,22 @@ prepare_source_repo() {
     return 0
   fi
 
-  if [[ -z "$ZIP_URL" ]]; then
-    log_err "ZIP_URL is empty. Set ZIP_URL in this script."
-    return 1
-  fi
+  local zip_url
+  zip_url="$(resolve_zip_url)"
 
   ensure_work_dir || return 1
   clear_cache_if_requested || return 1
 
-  local zip_path="$WORK_DIR/nzbget-user-scripts.zip"
+  local zip_path="$WORK_DIR/${GITHUB_REPO}.zip"
   local extract_dir="$WORK_DIR/extracted"
 
   if [[ "$FETCH_UPDATES" == "1" || ! -f "$zip_path" ]]; then
-    log_stderr "Downloading ZIP: $ZIP_URL"
+    log_stderr "Downloading ZIP: $zip_url"
     if [[ "$DRY_RUN" == "1" ]]; then
       log_stderr "DRY_RUN: downloading/extracting is allowed (no destination writes)."
     fi
     local dl_rc=0
-    download_file_if_modified "$ZIP_URL" "$zip_path" || dl_rc=$?
+    download_file_if_modified "$zip_url" "$zip_path" || dl_rc=$?
     if [[ $dl_rc -eq 1 ]]; then
       return 1
     fi
@@ -478,8 +501,24 @@ sync_one_file() {
     return 1
   }
   rm -f "$merged"
-  [[ "$dest_file" == */main.py ]] && chmod +x "$dest_file" 2>/dev/null || true
+  if [[ "$dest_file" == */main.py || "$dest_file" == *.sh ]]; then
+    chmod +x "$dest_file" 2>/dev/null || true
+  fi
   [[ "$quiet" == "0" ]] && log "Updated: $label"
+  return 0
+}
+
+sync_updater_from_repo() {
+  # Usage: sync_updater_from_repo <src_updater> <dest_file> <label>
+  local src_updater="$1"
+  local dest_file="$2"
+  local label="$3"
+  local rc=0
+
+  sync_one_file "$src_updater" "$dest_file" "$label" 0 || rc=$?
+  if [[ $rc -eq 1 ]]; then
+    return 1
+  fi
   return 0
 }
 
@@ -568,6 +607,14 @@ main() {
     log_err "RESET_CONFIG must be 0 or 1"
     return 1
   fi
+  if [[ "$UPDATE_SELF" != "0" && "$UPDATE_SELF" != "1" ]]; then
+    log_err "UPDATE_SELF must be 0 or 1"
+    return 1
+  fi
+  if [[ "$INSTALL_UPDATER_IN_SCRIPTDIR" != "0" && "$INSTALL_UPDATER_IN_SCRIPTDIR" != "1" ]]; then
+    log_err "INSTALL_UPDATER_IN_SCRIPTDIR must be 0 or 1"
+    return 1
+  fi
 
   local src_root
   src_root="$(prepare_source_repo | tail -n 1)" || return 1
@@ -581,19 +628,30 @@ main() {
   fi
 
   log "Syncing NZBGet extension scripts"
+  log "Repository: ${GITHUB_USER}/${GITHUB_REPO}"
   log "Source: $src_root"
   log "Dest: $NZBGET_SCRIPTDIR"
   log "DryRun: $DRY_RUN"
 
   # Self-update (moving the file does not affect the already-running process).
-  local this_path src_updater
+  local this_path src_updater scriptdir_updater
   this_path="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
-  src_updater="$src_root/$(basename "$0")"
-  if [[ -f "$src_updater" ]]; then
-    log "Checking: $(basename "$0") (self)"
-    sync_one_file "$src_updater" "$this_path" "$(basename "$0") (self)" 0
+  src_updater="$src_root/${UPDATER_BASENAME}"
+  scriptdir_updater="$NZBGET_SCRIPTDIR/${UPDATER_BASENAME}"
+
+  if [[ "$UPDATE_SELF" == "1" ]]; then
+    if [[ -f "$src_updater" ]]; then
+      log "Checking: ${UPDATER_BASENAME} (self)"
+      sync_updater_from_repo "$src_updater" "$this_path" "${UPDATER_BASENAME} (self)"
+      if [[ "$INSTALL_UPDATER_IN_SCRIPTDIR" == "1" && "$this_path" != "$scriptdir_updater" ]]; then
+        log "Checking: ${UPDATER_BASENAME} (scriptdir)"
+        sync_updater_from_repo "$src_updater" "$scriptdir_updater" "${UPDATER_BASENAME} (scriptdir)"
+      fi
+    else
+      log "No upstream updater found at: $src_updater"
+    fi
   else
-    log "No upstream updater found at: $src_updater"
+    log "Skipped (UPDATE_SELF=0): ${UPDATER_BASENAME}"
   fi
 
   local updated=0 unchanged=0 skipped=0 failed=0

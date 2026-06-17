@@ -6,6 +6,8 @@ from __future__ import annotations
 #
 # Video File Validator
 #
+# Repository: nzbget-user-scripts
+#
 # Uses ffprobe to verify downloaded video files are valid and playable.
 # Catches truncated downloads, corrupt streams, zero-duration files, and
 # files with missing codec data — all common after usenet downloads.

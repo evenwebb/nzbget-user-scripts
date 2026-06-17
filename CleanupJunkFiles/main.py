@@ -4,6 +4,8 @@
 #
 # Cleanup Junk Files
 #
+# Repository: nzbget-user-scripts
+#
 # Removes leftover "junk" files after a successful download/unpack to keep
 # your library directories clean (e.g. .sfv, .url, .nzb, .par2, etc.).
 #
